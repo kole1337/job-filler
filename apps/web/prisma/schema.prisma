@@ -1,0 +1,132 @@
+// Job Filler — portal database schema.
+// Sensitive PII columns (dateOfBirth, phone, address*, nationality) are stored as
+// AES-256-GCM ciphertext produced by src/lib/crypto.ts. They are typed as String
+// here and only ever decrypted server-side for the authenticated owner.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  profile          Profile?
+  education        Education[]
+  experience       Experience[]
+  customAnswers    CustomAnswer[]
+  sessions         Session[]
+  verificationTokens VerificationToken[]
+}
+
+/// Opaque refresh tokens for the browser extension. `tokenHash` = SHA-256 of the
+/// random token; the raw token is only ever returned once.
+model Session {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String   @unique
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  lastUsedAt DateTime @default(now())
+  expiresAt  DateTime
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  purpose   String   // "email-verify" | "password-reset"
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Profile {
+  userId              String   @id
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName           String   @default("")
+  middleName          String?
+  lastName            String   @default("")
+  preferredName       String?
+  dateOfBirthEnc      String?  // encrypted
+  email               String   @default("")
+  phoneEnc            String?  // encrypted
+  phoneCountry        String?
+  addressLine1Enc     String?  // encrypted
+  addressLine2Enc     String?  // encrypted
+  city                String?
+  region              String?
+  postcode            String?
+  country             String   @default("GB")
+  nationalityEnc      String?  // encrypted
+  rightToWorkUK       Boolean?
+  needsVisaSponsorship Boolean?
+  linkedinUrl         String?
+  portfolioUrl        String?
+  githubUrl           String?
+  updatedAt           DateTime @updatedAt
+}
+
+model Education {
+  id                String  @id @default(cuid())
+  userId            String
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sortOrder         Int     @default(0)
+  institution       String
+  qualificationType String
+  fieldOfStudy      String?
+  gradeType         String
+  gradeValue        String?
+  startDate         String? // YYYY-MM
+  endDate           String?
+  current           Boolean @default(false)
+  description       String?
+
+  @@index([userId])
+}
+
+model Experience {
+  id             String  @id @default(cuid())
+  userId         String
+  user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sortOrder      Int     @default(0)
+  jobTitle       String
+  employer       String
+  location       String?
+  employmentType String?
+  startDate      String  // YYYY-MM
+  endDate        String?
+  current        Boolean @default(false)
+  description    String?
+
+  @@index([userId])
+}
+
+model CustomAnswer {
+  id        String  @id @default(cuid())
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  key       String
+  label     String
+  valueEnc  String  // encrypted
+  matchHints String[] @default([])
+  sensitive Boolean @default(false)
+
+  @@unique([userId, key])
+  @@index([userId])
+}
