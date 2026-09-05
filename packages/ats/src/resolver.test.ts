@@ -216,6 +216,31 @@ describe('Workday My Information (Barclays wd3, live)', () => {
     expect(t['formField-phoneNumber']).toBe('personal.phone');
   });
 
+  it('maps the Education block (school/degree/fieldOfStudy/gradeAverage/years)', () => {
+    const res = resolveFields(
+      [
+        f('formField-school'),
+        f('formField-degree'),
+        f('formField-fieldOfStudy'),
+        f('formField-gradeAverage'),
+        f('formField-firstYearAttended', { attrs: { formField: 'formField-firstYearAttended', 'data-automation-id': 'dateSectionYear-input' } }),
+        f('formField-lastYearAttended', { attrs: { formField: 'formField-lastYearAttended', 'data-automation-id': 'dateSectionYear-input' } }),
+      ],
+      { ...wflat, 'education.0.startYear': '2019', 'education.0.endYear': '2022', 'education.0.fieldOfStudy': 'Maths', 'education.0.gradeValue': '2:1' },
+      workdayAdapter,
+      wctx,
+    );
+    const all = [...res.autofill, ...res.review];
+    const t = Object.fromEntries(all.map((m) => [m.descriptor.attrs!.formField, m.target]));
+    expect(t['formField-school']).toBe('education.0.institution');
+    expect(t['formField-degree']).toBe('education.0.qualificationType');
+    expect(t['formField-fieldOfStudy']).toBe('education.0.fieldOfStudy');
+    expect(t['formField-gradeAverage']).toBe('education.0.gradeValue');
+    expect(all.find((m) => m.descriptor.attrs!.formField === 'formField-firstYearAttended')?.value).toBe('2019');
+    // degree is a prompt picker -> routed to review, not autofill
+    expect(res.review.some((m) => m.target === 'education.0.qualificationType')).toBe(true);
+  });
+
   it('does not confuse countryRegion / countryPhoneCode with country', () => {
     const res = resolveFields(
       [f('formField-country'), f('formField-countryRegion'), f('formField-countryPhoneCode')],

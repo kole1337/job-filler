@@ -56,6 +56,8 @@ export function flattenProfile(profile: Profile): Record<string, string> {
     out[`education.${i}.gradeValueShort`] = shortGrade(e.gradeValue) ?? '';
     out[`education.${i}.startDate`] = e.startDate ?? '';
     out[`education.${i}.endDate`] = e.endDate ?? '';
+    out[`education.${i}.startYear`] = e.startDate?.slice(0, 4) ?? '';
+    out[`education.${i}.endYear`] = e.endDate?.slice(0, 4) ?? '';
     out[`education.${i}.current`] = yn(e.current);
     out[`education.${i}.description`] = e.description ?? '';
   });
@@ -66,6 +68,8 @@ export function flattenProfile(profile: Profile): Record<string, string> {
     out[`experience.${i}.location`] = e.location ?? '';
     out[`experience.${i}.startDate`] = e.startDate ?? '';
     out[`experience.${i}.endDate`] = e.endDate ?? '';
+    out[`experience.${i}.startYear`] = e.startDate?.slice(0, 4) ?? '';
+    out[`experience.${i}.endYear`] = e.endDate?.slice(0, 4) ?? '';
     out[`experience.${i}.current`] = yn(e.current);
     out[`experience.${i}.description`] = e.description ?? '';
   });

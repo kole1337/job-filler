@@ -23,9 +23,17 @@ import { normalize } from '../normalize';
  *   formField-candidateIsPreviousWorker  radios "previously worked here?"
  *   (no email field — Workday uses the account email; no DoB on this step)
  *
- * My Experience — the Work Experience / Education blocks only render after their
- * "Add" button is clicked; ids follow `workExperience-<n>-*` / `education-<n>-*`
- * (still to be verified live).
+ * My Experience → Education — confirmed live (Barclays wd3, 2026), fields render
+ * after "Add" and are NOT index-suffixed on a single entry:
+ *   formField-school            "School or University"   (prompt picker)
+ *   formField-degree            "Degree"                 (prompt picker)
+ *   formField-fieldOfStudy      "Field of Study"         (text)
+ *   formField-gradeAverage      "Overall Result (GPA)"   (text)
+ *   formField-firstYearAttended "From"                   (year-only, dateSectionYear-input)
+ *   formField-lastYearAttended  "To (Actual or Expected)" (year-only)
+ *
+ * My Experience → Work Experience — still R. Many tenants (Barclays incl.) omit
+ * the Work Experience section entirely; `workExperience-<n>-*` unverified.
  */
 const AID_MAP: Array<[RegExp, TargetKey, string]> = [
   [/legalName-?-?firstName|legalNameSection.*first/i, 'personal.firstName', 'first name'],
@@ -96,14 +104,21 @@ export const workdayAdapter: Adapter = {
       if (/endDate|to/i.test(key)) return { target: `experience.${i}.endDate` as TargetKey, confidence: 0.75, reason: 'Workday end date' };
     }
 
-    if (/education/i.test(key)) {
-      const i = indexed(key, 'education');
-      if (/schoolName|school|university/i.test(key)) return { target: `education.${i}.institution` as TargetKey, confidence: 0.88, reason: 'Workday school' };
-      if (/degree/i.test(key)) return { target: `education.${i}.qualificationType` as TargetKey, confidence: 0.85, reason: 'Workday degree' };
-      if (/fieldOfStudy|field/i.test(key)) return { target: `education.${i}.fieldOfStudy` as TargetKey, confidence: 0.85, reason: 'Workday field of study' };
-      if (/grade|gpa/i.test(key)) return { target: `education.${i}.gradeValue` as TargetKey, confidence: 0.8, reason: 'Workday grade' };
-      if (/firstYear|from/i.test(key)) return { target: `education.${i}.startDate` as TargetKey, confidence: 0.7, reason: 'Workday first year' };
-      if (/lastYear|to/i.test(key)) return { target: `education.${i}.endDate` as TargetKey, confidence: 0.7, reason: 'Workday last year' };
+    // Education — matched by the confirmed formField names (not "education"-tokened).
+    {
+      const i = d.sectionIndex ?? indexed(key, 'education');
+      if (/formField-school\b|schoolName|\buniversity\b/i.test(key))
+        return { target: `education.${i}.institution` as TargetKey, confidence: 0.85, reason: 'Workday school' };
+      if (/formField-degree\b|\bdegree\b/i.test(key))
+        return { target: `education.${i}.qualificationType` as TargetKey, confidence: 0.6, reason: 'Workday degree (prompt — confirm)' };
+      if (/formField-fieldOfStudy|fieldOfStudy/i.test(key))
+        return { target: `education.${i}.fieldOfStudy` as TargetKey, confidence: 0.85, reason: 'Workday field of study' };
+      if (/formField-gradeAverage|gradeAverage|\bgpa\b/i.test(key))
+        return { target: `education.${i}.gradeValue` as TargetKey, confidence: 0.8, reason: 'Workday overall result' };
+      if (/formField-firstYearAttended|firstYear/i.test(key))
+        return { target: `education.${i}.startYear` as TargetKey, confidence: 0.75, reason: 'Workday first year attended' };
+      if (/formField-lastYearAttended|lastYear/i.test(key))
+        return { target: `education.${i}.endYear` as TargetKey, confidence: 0.75, reason: 'Workday last year attended' };
     }
 
     // Country prompt without a section prefix
