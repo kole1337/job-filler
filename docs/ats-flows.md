@@ -1,11 +1,16 @@
 # ATS application flow analysis
 
-Status of each section: **R** = from documentation / prior knowledge (needs live
-confirmation), **L** = confirmed against a live posting.
+Status of each section: **R** = from documentation / prior knowledge, **L** =
+confirmed against a live posting.
 
-> Live confirmation is pending — the Claude browser extension was not connected
-> during the initial build. Run the "Live verification pass" (see the plan) and
-> update the `// VERIFY LIVE` markers in `packages/ats/src/adapters/*` plus this doc.
+### Live verification log (2026)
+
+| ATS | Posting inspected | Result |
+| --- | --- | --- |
+| Lever | `jobs.lever.co/levelai/.../apply` | **L** — all built-in field names confirmed (see adapter). |
+| Greenhouse | `job-boards.greenhouse.io/anthropic/jobs/5023394008` | **L (personal)** — new React board keeps `#first_name`/`#last_name`/`#email`/`#phone`/`#country` ids with `<label for>`. Education/employment/custom blocks not present on this posting — still **R**. |
+| Ashby | `jobs.ashbyhq.com/level-ai/.../application` | **L** — `_systemfield_name`/`_systemfield_email`, `phone`, `currentCompany`, `currentLocation`, `LinkedIn`/`GitHub`/`Portfolio` confirmed. |
+| Workday | `nvidia.wd5.myworkdayjobs.com/.../applyManually` | **Partial** — step order + `data-automation-id` convention confirmed; My Information / My Experience fields sit behind mandatory account creation and were not inspected. |
 
 ---
 

@@ -15,11 +15,15 @@ import { normalize } from '../normalize';
  * VERIFY LIVE: the React board is now the default for new customers; confirm which
  * markup the target posting uses and whether education/employment blocks still render.
  */
+// Confirmed live (job-boards.greenhouse.io React board, 2026): personal fields
+// carry a real `id` (first_name/last_name/email/phone/country) with `name` empty,
+// plus <label for> and aria-label. `country` is an intl-tel-input style combobox.
 const ID_MAP: Record<string, TargetKey> = {
   first_name: 'personal.firstName',
   last_name: 'personal.lastName',
   email: 'personal.email',
   phone: 'personal.phone',
+  country: 'personal.country',
 };
 
 function classicEducation(id: string): { target: TargetKey; reason: string } | null {

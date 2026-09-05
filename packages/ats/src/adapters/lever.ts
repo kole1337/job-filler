@@ -11,15 +11,20 @@ import { normalize } from '../normalize';
  * VERIFY LIVE: confirm the `urls[...]` bracket casing and the `org`/`location` names
  * on a current posting; Lever has iterated the board markup.
  */
+// Confirmed live (jobs.lever.co, 2026): name, email, phone, org, location
+// (id="location-input"), resume (file, id="resume-upload-input"),
+// opportunityLocationId (<select> "which location are you applying for"),
+// and capitalised url keys urls[LinkedIn] / urls[GitHub] / urls[Portfolio] /
+// urls[Twitter] / urls[Other]. Labels live in a sibling .application-label.
 const NAME_MAP: Record<string, TargetKey> = {
   name: 'personal.fullName',
   email: 'personal.email',
   phone: 'personal.phone',
   org: 'experience.0.employer',
+  location: 'personal.city',
   'urls[linkedin]': 'personal.linkedinUrl',
   'urls[github]': 'personal.githubUrl',
   'urls[portfolio]': 'personal.portfolioUrl',
-  'urls[other]': 'personal.portfolioUrl',
 };
 
 export const leverAdapter: Adapter = {
@@ -40,9 +45,12 @@ export const leverAdapter: Adapter = {
     const name = normalize(d.name).replace(/\s+/g, '');
     const rawName = (d.name ?? '').toLowerCase().replace(/\s+/g, '');
     const target = NAME_MAP[rawName] ?? NAME_MAP[name];
-    if (target) return { target, confidence: 0.95, reason: `Lever name="${d.name}"` };
-    if (rawName.startsWith('urls[')) {
-      return { target: 'personal.portfolioUrl', confidence: 0.6, reason: `Lever url field ${d.name}` };
+    if (target) {
+      const conf = rawName === 'location' ? 0.6 : 0.95;
+      return { target, confidence: conf, reason: `Lever name="${d.name}"` };
+    }
+    if (rawName.startsWith('urls[') && !rawName.includes('twitter')) {
+      return { target: 'personal.portfolioUrl', confidence: 0.45, reason: `Lever url field ${d.name}` };
     }
     return null;
   },

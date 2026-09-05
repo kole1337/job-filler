@@ -10,10 +10,20 @@ import { normalize } from '../normalize';
  * VERIFY LIVE: confirm the `_systemfield_*` names and how the location field is
  * structured (single combobox vs. split address) on a current posting.
  */
+// Confirmed live (jobs.ashbyhq.com, 2026): _systemfield_name, _systemfield_email,
+// _systemfield_resume (file); phone (name/id "phone"); currentCompany;
+// currentLocation; additionalInformation (textarea); and link fields keyed
+// LinkedIn / Twitter / GitHub / Portfolio / Other. Visible <label> is not in a
+// simple wrapper, so name/id is the reliable signal here.
 const NAME_MAP: Record<string, TargetKey> = {
   _systemfield_name: 'personal.fullName',
   _systemfield_email: 'personal.email',
-  _systemfield_phone: 'personal.phone',
+  phone: 'personal.phone',
+  currentcompany: 'experience.0.employer',
+  currentlocation: 'personal.city',
+  linkedin: 'personal.linkedinUrl',
+  github: 'personal.githubUrl',
+  portfolio: 'personal.portfolioUrl',
 };
 
 export const ashbyAdapter: Adapter = {

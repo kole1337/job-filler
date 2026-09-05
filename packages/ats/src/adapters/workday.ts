@@ -13,8 +13,13 @@ import { normalize } from '../normalize';
  *   education-<n>: schoolName, degree, fieldOfStudy, gradeAverage,
  *     firstYearAttended, lastYearAttended
  *
- * VERIFY LIVE: the workExperience-/education- prefixes and the date sub-widget
- * automation ids vary by tenant Workday version — capture from a real posting.
+ * Live check (NVIDIA wd5, 2026): step rail confirmed as Create Account/Sign In →
+ * My Information → My Experience → Application Questions → Voluntary Disclosures →
+ * Self Identify → Review, and the bare `data-automation-id` convention
+ * (`email`, `password`, ...) is present. The My Information / My Experience field
+ * ids below are still PARTIALLY VERIFIED: the application form sits behind
+ * mandatory account creation, which the tooling is not permitted to complete, so
+ * confirm these against a tenant where you have an account.
  */
 const AID_MAP: Array<[RegExp, TargetKey, string]> = [
   [/legalNameSection.*first/i, 'personal.firstName', 'first name'],
@@ -45,6 +50,7 @@ export const workdayAdapter: Adapter = {
   getStepPlan: () => ({
     singlePage: false,
     steps: [
+      'Create Account / Sign In',
       'My Information',
       'My Experience (Work Experience, Education, Skills, Websites)',
       'Application Questions',

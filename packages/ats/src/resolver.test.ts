@@ -5,6 +5,7 @@ import { resolveFields } from './resolver';
 import { contextFromLocation } from './detect';
 import { leverAdapter } from './adapters/lever';
 import { greenhouseAdapter } from './adapters/greenhouse';
+import { ashbyAdapter } from './adapters/ashby';
 import { genericAdapter } from './adapters/generic';
 import type { FieldDescriptor } from './types';
 
@@ -118,6 +119,44 @@ describe('resolver keyword fallback', () => {
     );
     const m = [...res.autofill, ...res.review].find((x) => x.target === 'education.0.qualificationType');
     expect(m?.value).toBe('b');
+  });
+});
+
+describe('live-verified adapter mappings (2026)', () => {
+  it('Lever: org -> current employer, location -> city', () => {
+    const res = resolveFields(
+      [d({ name: 'org' }), d({ name: 'location', id: 'location-input' })],
+      flat,
+      leverAdapter,
+      ctx,
+    );
+    const all = [...res.autofill, ...res.review];
+    expect(all.find((m) => m.descriptor.name === 'org')?.target).toBe('experience.0.employer');
+    expect(all.find((m) => m.descriptor.name === 'location')?.target).toBe('personal.city');
+  });
+
+  it('Ashby: _systemfield_email and phone map by name', () => {
+    const actx = contextFromLocation('https://jobs.ashbyhq.com/acme/x/application', undefined);
+    const res = resolveFields(
+      [d({ name: '_systemfield_email', kind: 'email' }), d({ name: 'phone', kind: 'tel' }), d({ name: 'currentCompany' })],
+      flat,
+      ashbyAdapter,
+      actx,
+    );
+    const all = [...res.autofill, ...res.review];
+    expect(all.find((m) => m.descriptor.name === '_systemfield_email')?.target).toBe('personal.email');
+    expect(all.find((m) => m.descriptor.name === 'phone')?.target).toBe('personal.phone');
+    expect(all.find((m) => m.descriptor.name === 'currentCompany')?.target).toBe('experience.0.employer');
+  });
+
+  it('Greenhouse React board: #country -> personal.country', () => {
+    const res = resolveFields(
+      [d({ id: 'country', label: 'Country', kind: 'text' })],
+      flat,
+      greenhouseAdapter,
+      contextFromLocation('https://job-boards.greenhouse.io/acme/jobs/1', undefined),
+    );
+    expect([...res.autofill, ...res.review][0]?.target).toBe('personal.country');
   });
 });
 
