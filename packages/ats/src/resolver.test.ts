@@ -149,14 +149,24 @@ describe('live-verified adapter mappings (2026)', () => {
     expect(all.find((m) => m.descriptor.name === 'currentCompany')?.target).toBe('experience.0.employer');
   });
 
-  it('Greenhouse React board: #country -> personal.country', () => {
+  it('Greenhouse React board: #country, #candidate-location, school--0/degree--0', () => {
+    const gctx = contextFromLocation('https://job-boards.greenhouse.io/acme/jobs/1', undefined);
     const res = resolveFields(
-      [d({ id: 'country', label: 'Country', kind: 'text' })],
+      [
+        d({ id: 'country', label: 'Country', kind: 'text' }),
+        d({ id: 'candidate-location', label: 'Location (City)', kind: 'text' }),
+        d({ id: 'school--0', label: 'School', kind: 'combobox', sectionIndex: 0 }),
+        d({ id: 'degree--0', label: 'Degree', kind: 'combobox', sectionIndex: 0 }),
+      ],
       flat,
       greenhouseAdapter,
-      contextFromLocation('https://job-boards.greenhouse.io/acme/jobs/1', undefined),
+      gctx,
     );
-    expect([...res.autofill, ...res.review][0]?.target).toBe('personal.country');
+    const t = Object.fromEntries([...res.autofill, ...res.review].map((m) => [m.descriptor.id, m.target]));
+    expect(t['country']).toBe('personal.country');
+    expect(t['candidate-location']).toBe('personal.city');
+    expect(t['school--0']).toBe('education.0.institution');
+    expect(t['degree--0']).toBe('education.0.qualificationType');
   });
 });
 

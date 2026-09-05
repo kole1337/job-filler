@@ -101,7 +101,14 @@ export const KEYWORD_RULES: KeywordRule[] = [
   {
     base: 'personal.needsVisaSponsorship',
     section: 'personal',
-    positives: ['require sponsorship', 'need sponsorship', 'visa sponsorship', 'require visa'],
+    positives: [
+      'require sponsorship',
+      'need sponsorship',
+      'visa sponsorship',
+      'immigration sponsorship',
+      'require visa',
+      'require immigration',
+    ],
     kinds: ['select', 'combobox', 'radiogroup', 'checkbox'],
     weight: 0.8,
   },

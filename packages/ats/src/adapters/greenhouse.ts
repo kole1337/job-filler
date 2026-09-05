@@ -12,8 +12,13 @@ import { normalize } from '../normalize';
  *   New React board (job-boards.greenhouse.io):
  *     inputs keyed by id^="question_" with aria-label / label text — resolver handles these.
  *
- * VERIFY LIVE: the React board is now the default for new customers; confirm which
- * markup the target posting uses and whether education/employment blocks still render.
+ * Live check (Anthropic + DoorDash on job-boards.greenhouse.io, 2026): the React
+ * board keeps `#first_name`/`#last_name`/`#email`/`#phone`/`#country`, adds
+ * `#candidate-location` ("Location (City)"), renders education as React-Select
+ * comboboxes `school--N` / `degree--N` / `discipline--N` / `start_date--N` /
+ * `end_date--N`, and custom questions as `#question_<numeric>` matched by label.
+ * Classic-board `*_records_attributes_*` ids are retained for older embedded forms
+ * but were not re-verified — employment section not seen on the checked postings.
  */
 // Confirmed live (job-boards.greenhouse.io React board, 2026): personal fields
 // carry a real `id` (first_name/last_name/email/phone/country) with `name` empty,
@@ -25,6 +30,28 @@ const ID_MAP: Record<string, TargetKey> = {
   phone: 'personal.phone',
   country: 'personal.country',
 };
+
+/**
+ * New React board (job-boards.greenhouse.io) education fields, confirmed live
+ * (DoorDash, 2026): React-Select comboboxes with id `<field>--<index>` —
+ * `school--0`, `degree--0`, and (when the company enables them) `discipline--0`,
+ * `start_date--0`, `end_date--0`. Custom questions are `question_<numeric>`,
+ * matched by their <label>.
+ */
+function reactBoardEducation(id: string): { target: TargetKey; reason: string } | null {
+  const m = id.match(/^(school|degree|discipline|start_date|end_date)--(\d+)$/);
+  if (!m) return null;
+  const field = m[1]!;
+  const i = Number(m[2]);
+  const map: Record<string, string> = {
+    school: 'institution',
+    degree: 'qualificationType',
+    discipline: 'fieldOfStudy',
+    start_date: 'startDate',
+    end_date: 'endDate',
+  };
+  return { target: `education.${i}.${map[field]}` as TargetKey, reason: `GH react board ${field}--${i}` };
+}
 
 function classicEducation(id: string): { target: TargetKey; reason: string } | null {
   const m = id.match(/education_records_attributes_(\d+)_(\w+)/);
@@ -86,6 +113,12 @@ export const greenhouseAdapter: Adapter = {
     const bare = id.replace(/^job_application_/, '').replace(/^candidate_/, '');
 
     if (ID_MAP[bare]) return { target: ID_MAP[bare]!, confidence: 0.95, reason: `GH #${bare}` };
+    if (bare === 'candidate-location') {
+      return { target: 'personal.city', confidence: 0.75, reason: 'GH #candidate-location' };
+    }
+
+    const reactEdu = reactBoardEducation(id);
+    if (reactEdu) return { ...reactEdu, confidence: 0.88 };
 
     const edu = classicEducation(id);
     if (edu) return { ...edu, confidence: 0.9 };

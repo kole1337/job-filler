@@ -8,9 +8,9 @@ confirmed against a live posting.
 | ATS | Posting inspected | Result |
 | --- | --- | --- |
 | Lever | `jobs.lever.co/levelai/.../apply` | **L** — all built-in field names confirmed (see adapter). |
-| Greenhouse | `job-boards.greenhouse.io/anthropic/jobs/5023394008` | **L (personal)** — new React board keeps `#first_name`/`#last_name`/`#email`/`#phone`/`#country` ids with `<label for>`. Education/employment/custom blocks not present on this posting — still **R**. |
+| Greenhouse | `job-boards.greenhouse.io/anthropic/...` and `.../doordashusa/jobs/7983501` | **L** — React board keeps `#first_name`/`#last_name`/`#email`/`#phone`/`#country`, adds `#candidate-location`; education is React-Select `school--N`/`degree--N`/`discipline--N`/`start_date--N`/`end_date--N`; custom questions are `#question_<numeric>` by label. Employment section not seen on the checked postings. Classic `*_records_attributes_*` retained for old embedded forms — still **R**. |
 | Ashby | `jobs.ashbyhq.com/level-ai/.../application` | **L** — `_systemfield_name`/`_systemfield_email`, `phone`, `currentCompany`, `currentLocation`, `LinkedIn`/`GitHub`/`Portfolio` confirmed. |
-| Workday | `nvidia.wd5.myworkdayjobs.com/.../applyManually` | **Partial** — step order + `data-automation-id` convention confirmed; My Information / My Experience fields sit behind mandatory account creation and were not inspected. |
+| Workday | `nvidia.wd5` + `barclays.wd3` `/applyManually` | **Partial** — step rail (Create Account/Sign In → My Information → My Experience → Application Questions → Voluntary Disclosures → Self Identify → Review) and `formField-<name>` + bare `data-automation-id` convention confirmed on both tenants. My Information / My Experience fields sit behind mandatory account creation — capture pending from a logged-in tenant (see the console snippet in the project chat / README). |
 
 ---
 
