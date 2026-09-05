@@ -152,6 +152,11 @@ export function extractFields(doc: Document, opts: ExtractOptions = {}): FieldDe
     for (const a of Array.from(el.attributes)) {
       if (a.name.startsWith('data-') || a.name.startsWith('aria-')) attrs[a.name] = a.value;
     }
+    // Workday wraps each control in a <div data-automation-id="formField-<name>">.
+    const formField = el
+      .closest('[data-automation-id^="formField-"]')
+      ?.getAttribute('data-automation-id');
+    if (formField) attrs.formField = formField;
 
     out.push({
       ref: elementRef(el),

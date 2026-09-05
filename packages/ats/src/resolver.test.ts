@@ -6,6 +6,7 @@ import { contextFromLocation } from './detect';
 import { leverAdapter } from './adapters/lever';
 import { greenhouseAdapter } from './adapters/greenhouse';
 import { ashbyAdapter } from './adapters/ashby';
+import { workdayAdapter } from './adapters/workday';
 import { genericAdapter } from './adapters/generic';
 import type { FieldDescriptor } from './types';
 
@@ -167,6 +168,67 @@ describe('live-verified adapter mappings (2026)', () => {
     expect(t['candidate-location']).toBe('personal.city');
     expect(t['school--0']).toBe('education.0.institution');
     expect(t['degree--0']).toBe('education.0.qualificationType');
+  });
+});
+
+describe('Workday My Information (Barclays wd3, live)', () => {
+  const wctx = contextFromLocation('https://barclays.wd3.myworkdayjobs.com/x', undefined);
+  const wflat = {
+    ...flat,
+    'personal.addressLine1': '10 Downing Street',
+    'personal.postcode': 'SW1A 2AA',
+    'personal.region': 'Greater London',
+    'personal.phoneCountry': 'GB',
+  };
+  const f = (formField: string, extra: Partial<FieldDescriptor> = {}): FieldDescriptor => ({
+    ref: 'r',
+    kind: 'text',
+    attrs: { formField },
+    ...extra,
+  });
+
+  it('maps legalName, address, phone and county correctly', () => {
+    const res = resolveFields(
+      [
+        f('formField-legalName--firstName', { attrs: { formField: 'formField-legalName--firstName', 'data-automation-id': 'name--legalName--firstName' } }),
+        f('formField-legalName--lastName'),
+        f('formField-addressLine1'),
+        f('formField-city'),
+        f('formField-countryRegion'),
+        f('formField-postalCode'),
+        f('formField-phoneNumber', { kind: 'text' }),
+        f('formField-countryPhoneCode'),
+        f('formField-source'),
+      ],
+      wflat,
+      workdayAdapter,
+      wctx,
+    );
+    const t = Object.fromEntries(
+      [...res.autofill, ...res.review].map((m) => [m.descriptor.attrs!.formField, m.target]),
+    );
+    expect(t['formField-legalName--firstName']).toBe('personal.firstName');
+    expect(t['formField-legalName--lastName']).toBe('personal.lastName');
+    expect(t['formField-addressLine1']).toBe('personal.addressLine1');
+    expect(t['formField-city']).toBe('personal.city');
+    expect(t['formField-countryRegion']).toBe('personal.region');
+    expect(t['formField-postalCode']).toBe('personal.postcode');
+    expect(t['formField-phoneNumber']).toBe('personal.phone');
+  });
+
+  it('does not confuse countryRegion / countryPhoneCode with country', () => {
+    const res = resolveFields(
+      [f('formField-country'), f('formField-countryRegion'), f('formField-countryPhoneCode')],
+      wflat,
+      workdayAdapter,
+      wctx,
+    );
+    const t = Object.fromEntries(
+      [...res.autofill, ...res.review].map((m) => [m.descriptor.attrs!.formField, m.target]),
+    );
+    expect(t['formField-country']).toBe('personal.country');
+    expect(t['formField-countryRegion']).toBe('personal.region');
+    expect(t['formField-countryPhoneCode']).toBe('personal.phoneCountry');
   });
 });
 

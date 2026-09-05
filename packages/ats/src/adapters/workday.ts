@@ -2,38 +2,47 @@ import type { Adapter, FieldDescriptor, TargetKey } from '../types';
 import { normalize } from '../normalize';
 
 /**
- * Workday (*.myworkdayjobs.com) — React SPA. Controls carry `data-automation-id`.
- * Common ids (stable across most tenants):
- *   legalNameSection_firstName / _lastName
- *   addressSection_addressLine1 / _city / _countryRegion / _postalCode
- *   email / phone-number / phone-device-type
- *   dateOfBirth (Voluntary Disclosures on some tenants)
- *   workExperience-<n>: jobTitle, company, location, currentlyWorkThisRole,
- *     startDate (month/year sub-widgets), endDate
- *   education-<n>: schoolName, degree, fieldOfStudy, gradeAverage,
- *     firstYearAttended, lastYearAttended
+ * Workday (*.myworkdayjobs.com) — React SPA. Every control sits in a wrapper
+ * `<div data-automation-id="formField-<name>">` (captured as `attrs.formField`
+ * by dom-extract), and the input itself often has its own `data-automation-id`
+ * using `--` separators.
  *
- * Live check (NVIDIA wd5, 2026): step rail confirmed as Create Account/Sign In →
- * My Information → My Experience → Application Questions → Voluntary Disclosures →
- * Self Identify → Review, and the bare `data-automation-id` convention
- * (`email`, `password`, ...) is present. The My Information / My Experience field
- * ids below are still PARTIALLY VERIFIED: the application form sits behind
- * mandatory account creation, which the tooling is not permitted to complete, so
- * confirm these against a tenant where you have an account.
+ * My Information — confirmed live (Barclays wd3, 2026):
+ *   formField-legalName--firstName  (input aid name--legalName--firstName)  "Given Name(s)"
+ *   formField-legalName--middleName / --lastName / --title (Prefix)
+ *   formField-preferredCheck        "I have a preferred name"
+ *   formField-country               "Country" (prompt picker)
+ *   formField-addressLine1 / 2 / 3  (input aid address--addressLine1 ...)
+ *   formField-city                  "City or Town"
+ *   formField-countryRegion         "County" (region, prompt picker)
+ *   formField-postalCode            "Postal Code"
+ *   formField-phoneType             "Phone Device Type" (prompt — needs "Mobile")
+ *   formField-countryPhoneCode      "Country Phone Code" (prompt)
+ *   formField-phoneNumber           "Phone Number"
+ *   formField-source                "How Did You Hear About Us?"
+ *   formField-candidateIsPreviousWorker  radios "previously worked here?"
+ *   (no email field — Workday uses the account email; no DoB on this step)
+ *
+ * My Experience — the Work Experience / Education blocks only render after their
+ * "Add" button is clicked; ids follow `workExperience-<n>-*` / `education-<n>-*`
+ * (still to be verified live).
  */
 const AID_MAP: Array<[RegExp, TargetKey, string]> = [
-  [/legalNameSection.*first/i, 'personal.firstName', 'first name'],
-  [/legalNameSection.*last/i, 'personal.lastName', 'last name'],
-  [/preferredNameSection.*first/i, 'personal.preferredName', 'preferred name'],
-  [/^email$|emailAddress/i, 'personal.email', 'email'],
-  [/phone-?number/i, 'personal.phone', 'phone'],
-  [/addressSection.*addressLine1|address-?line-?1/i, 'personal.addressLine1', 'address line 1'],
-  [/addressSection.*addressLine2|address-?line-?2/i, 'personal.addressLine2', 'address line 2'],
-  [/addressSection.*city|municipality/i, 'personal.city', 'city'],
-  [/addressSection.*(region|state|countyName)/i, 'personal.region', 'region'],
-  [/addressSection.*(postalCode|postal-?code)/i, 'personal.postcode', 'postcode'],
-  [/addressSection.*countryRegion|country-?region|^country$/i, 'personal.country', 'country'],
+  [/legalName-?-?firstName|legalNameSection.*first/i, 'personal.firstName', 'first name'],
+  [/legalName-?-?middleName/i, 'personal.middleName', 'middle name'],
+  [/legalName-?-?lastName|legalNameSection.*last/i, 'personal.lastName', 'last name'],
+  [/preferredName-?-?firstName|preferredNameSection.*first/i, 'personal.preferredName', 'preferred name'],
+  [/^formField-email$|emailAddress|^email$/i, 'personal.email', 'email'],
+  [/formField-phoneNumber|phoneNumber-?-?phoneNumber|phone-?number/i, 'personal.phone', 'phone'],
+  [/formField-countryPhoneCode|countryPhoneCode/i, 'personal.phoneCountry', 'country phone code'],
+  [/formField-addressLine1|address-?-?addressLine1|address-?line-?1/i, 'personal.addressLine1', 'address line 1'],
+  [/formField-addressLine2|address-?-?addressLine2|address-?line-?2/i, 'personal.addressLine2', 'address line 2'],
+  [/formField-city|address-?-?city|addressSection.*city|municipality/i, 'personal.city', 'city'],
+  [/formField-countryRegion|address-?-?countyName|addressSection.*(region|state|countyName)/i, 'personal.region', 'region/county'],
+  [/formField-postalCode|address-?-?postalCode|postal-?code/i, 'personal.postcode', 'postcode'],
+  [/formField-country\b|countryRegion|country-?region/i, 'personal.country', 'country'],
   [/dateOfBirth|dob/i, 'personal.dateOfBirth', 'date of birth'],
+  [/formField-source\b|source-?-?source/i, 'custom.how-did-you-hear', 'how did you hear about us'],
 ];
 
 function indexed(aid: string, kind: 'workExperience' | 'education'): number {
@@ -68,7 +77,8 @@ export const workdayAdapter: Adapter = {
   }),
   resolveField: (d: FieldDescriptor) => {
     const aid = d.attrs?.['data-automation-id'] ?? d.attrs?.dataAutomationId ?? '';
-    const key = aid || d.name || d.id || '';
+    const formField = d.attrs?.formField ?? '';
+    const key = [formField, aid, d.name, d.id].filter(Boolean).join(' ');
     if (!key) return null;
 
     for (const [re, target, label] of AID_MAP) {
@@ -103,8 +113,10 @@ export const workdayAdapter: Adapter = {
     return null;
   },
   quirks: [
-    'Autofill-with-Resume on step 1 pre-parses the CV and often mis-maps — extension fills the structured fields afterwards.',
-    'Prompt pickers reject typed values that are not in their list; unmatched picks go to review.',
-    'Some tenants gate the whole application behind account creation — the user must do that.',
+    'My Information has no email or date-of-birth field — Workday uses the account email; DoB (if asked) is under Voluntary Disclosures.',
+    '"Phone Device Type", "Country Phone Code", "Country" and "County" are prompt pickers — type then pick; unmatched values go to review.',
+    'Autofill-with-Resume on step 1 pre-parses the CV and often mis-maps — the extension fills the structured fields afterwards.',
+    'Work Experience / Education blocks only appear after their "Add" button is clicked.',
+    'Most tenants (Barclays, NVIDIA seen) gate the whole application behind account creation — the user must do that first.',
   ],
 };
