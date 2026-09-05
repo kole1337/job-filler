@@ -53,11 +53,6 @@ const AID_MAP: Array<[RegExp, TargetKey, string]> = [
   [/formField-source\b|source-?-?source/i, 'custom.how-did-you-hear', 'how did you hear about us'],
 ];
 
-function indexed(aid: string, kind: 'workExperience' | 'education'): number {
-  const m = aid.match(new RegExp(`${kind}-?(\\d+)`, 'i'));
-  return m ? Math.max(0, Number(m[1]) - 1) : 0;
-}
-
 export const workdayAdapter: Adapter = {
   id: 'workday',
   matches: (ctx) =>
@@ -94,7 +89,9 @@ export const workdayAdapter: Adapter = {
     }
 
     if (/workExperience/i.test(key)) {
-      const i = indexed(key, 'workExperience');
+      // sectionIndex is assigned by dom-extract in DOM order (1st block on the
+      // page = 0), never from the ids Workday stamps on the blocks.
+      const i = d.sectionIndex ?? 0;
       if (/jobTitle|title/i.test(key)) return { target: `experience.${i}.jobTitle` as TargetKey, confidence: 0.88, reason: 'Workday job title' };
       if (/company|employer/i.test(key)) return { target: `experience.${i}.employer` as TargetKey, confidence: 0.88, reason: 'Workday company' };
       if (/location/i.test(key)) return { target: `experience.${i}.location` as TargetKey, confidence: 0.8, reason: 'Workday location' };
@@ -106,7 +103,7 @@ export const workdayAdapter: Adapter = {
 
     // Education — matched by the confirmed formField names (not "education"-tokened).
     {
-      const i = d.sectionIndex ?? indexed(key, 'education');
+      const i = d.sectionIndex ?? 0;
       if (/formField-school\b|schoolName|\buniversity\b/i.test(key))
         return { target: `education.${i}.institution` as TargetKey, confidence: 0.85, reason: 'Workday school' };
       if (/formField-degree\b|\bdegree\b/i.test(key))

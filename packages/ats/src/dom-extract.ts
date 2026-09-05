@@ -124,6 +124,11 @@ export function extractFields(doc: Document, opts: ExtractOptions = {}): FieldDe
   const els = Array.from(root.querySelectorAll<HTMLElement>(RELEVANT));
   const seenRadioNames = new Set<string>();
   const out: FieldDescriptor[] = [];
+  // Map each descriptor to the repeated block (if any) it belongs to, so we can
+  // renumber the blocks 0,1,2… in DOM order afterwards — the numbers embedded in
+  // a block's id (Workday's `education-16`) are component-instance ids, not the
+  // entry ordinal.
+  const blockOf = new Map<FieldDescriptor, { block: Element; kind: string }>();
 
   for (const el of els) {
     if (el instanceof HTMLInputElement && SKIP_TYPES.has(el.type)) continue;
@@ -158,7 +163,7 @@ export function extractFields(doc: Document, opts: ExtractOptions = {}): FieldDe
       ?.getAttribute('data-automation-id');
     if (formField) attrs.formField = formField;
 
-    out.push({
+    const desc: FieldDescriptor = {
       ref: elementRef(el),
       kind: kindOf(el),
       label: labelFor(el, doc),
@@ -171,26 +176,56 @@ export function extractFields(doc: Document, opts: ExtractOptions = {}): FieldDe
       groupLabel: groupLabel(el),
       options: optionsOf(el),
       attrs: Object.keys(attrs).length ? attrs : undefined,
-      sectionIndex: inferSectionIndex(el),
-    });
+    };
+    const rb = repeatBlockOf(el);
+    if (rb) blockOf.set(desc, rb);
+    out.push(desc);
   }
+
+  renumberSections(out, blockOf);
   return out;
 }
 
-/** Rough guess at which repeated block (0-based) a field sits in. */
-function inferSectionIndex(el: HTMLElement): number | undefined {
+/** The repeated-entry container a field sits in, plus a coarse section kind. */
+function repeatBlockOf(el: HTMLElement): { block: Element; kind: string } | undefined {
   const block = el.closest(
     '[data-automation-id*="workExperience"],[data-automation-id*="education"],' +
       '[id*="education_records_attributes_"],[id*="employment_records_attributes_"],' +
       '[class*="repeat"],[class*="entry"]',
   );
   if (!block) return undefined;
-  const idAttr = block.id || block.getAttribute('data-automation-id') || '';
-  const m = idAttr.match(/(\d+)/);
-  if (m) return Math.max(0, Number(m[1]) - (idAttr.includes('records_attributes') ? 0 : 1));
-  const siblings = block.parentElement
-    ? Array.from(block.parentElement.children).filter((c) => c.className === block.className)
-    : [];
-  const idx = siblings.indexOf(block);
-  return idx >= 0 ? idx : undefined;
+  const hint = `${block.id} ${block.getAttribute('data-automation-id') ?? ''} ${block.className}`;
+  const kind = /education|education_records/i.test(hint)
+    ? 'education'
+    : /workExperience|employment_records/i.test(hint)
+      ? 'workExperience'
+      : 'generic';
+  return { block, kind };
+}
+
+/**
+ * Assign `sectionIndex` per section kind by ranking the distinct blocks in the
+ * order their first field appears (DOM order), so the first education entry on
+ * the page is 0, the next is 1 — regardless of the ids Workday stamps on them.
+ */
+function renumberSections(
+  fields: FieldDescriptor[],
+  blockOf: Map<FieldDescriptor, { block: Element; kind: string }>,
+): void {
+  const order = new Map<string, Element[]>();
+  for (const f of fields) {
+    const rb = blockOf.get(f);
+    if (!rb) continue;
+    let list = order.get(rb.kind);
+    if (!list) {
+      list = [];
+      order.set(rb.kind, list);
+    }
+    if (!list.includes(rb.block)) list.push(rb.block);
+  }
+  for (const f of fields) {
+    const rb = blockOf.get(f);
+    if (!rb) continue;
+    f.sectionIndex = order.get(rb.kind)!.indexOf(rb.block);
+  }
 }
