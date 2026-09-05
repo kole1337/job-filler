@@ -1,0 +1,26 @@
+node_modules/
+dist/
+.next/
+out/
+build/
+.output/
+.wxt/
+coverage/
+*.zip
+*.tsbuildinfo
+
+# env
+.env
+.env.local
+.env*.local
+!.env.example
+
+# prisma
+prisma/*.db
+prisma/migrations/**/migration_lock.toml.bak
+
+# misc
+.DS_Store
+*.log
+.vercel
+.turbo

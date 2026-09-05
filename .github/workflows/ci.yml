@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate --schema apps/web/prisma/schema.prisma
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build:ext
+      - run: npm audit --omit=dev || true
+        env:
+          # Placeholder values so `next build` type-checks in CI without secrets.
+          DATABASE_URL: postgresql://u:p@localhost:5432/db
+          DIRECT_URL: postgresql://u:p@localhost:5432/db
+          AUTH_SECRET: ci-secret-ci-secret-ci-secret-xxxx
+          EXT_JWT_SECRET: ci-secret-ci-secret-ci-secret-xxxx
+          ENCRYPTION_KEY: Y2kta2V5LWNpLWtleS1jaS1rZXktY2kta2V5LTEyMzQ1Ng==
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+      - run: npm run build:web
+        env:
+          DATABASE_URL: postgresql://u:p@localhost:5432/db
+          DIRECT_URL: postgresql://u:p@localhost:5432/db
+          AUTH_SECRET: ci-secret-ci-secret-ci-secret-xxxx
+          EXT_JWT_SECRET: ci-secret-ci-secret-ci-secret-xxxx
+          ENCRYPTION_KEY: Y2kta2V5LWNpLWtleS1jaS1rZXktY2kta2V5LTEyMzQ1Ng==
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
