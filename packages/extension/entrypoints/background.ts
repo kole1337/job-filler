@@ -3,7 +3,7 @@ import { fetchProfile, login, logout } from '@/src/lib/api';
 import { getAuth, getCachedProfile } from '@/src/lib/storage';
 
 export default defineBackground(() => {
-  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  browser.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     (async () => {
       switch (msg?.type) {
         case 'AUTH_STATUS': {
@@ -40,8 +40,8 @@ export default defineBackground(() => {
   });
 
   // Periodically refresh the cached profile while logged in.
-  chrome.alarms.create('sync', { periodInMinutes: 180 });
-  chrome.alarms.onAlarm.addListener((a) => {
+  browser.alarms.create('sync', { periodInMinutes: 180 });
+  browser.alarms.onAlarm.addListener((a) => {
     if (a.name === 'sync') fetchProfile().catch(() => {});
   });
 });

@@ -1,6 +1,23 @@
+import { readFileSync } from 'node:fs';
 import { defineConfig } from 'wxt';
 
-const PORTAL = process.env.WXT_PORTAL_URL ?? 'http://localhost:3000';
+// WXT doesn't load .env into process.env before this config runs, so read it here.
+function envFromFile(key: string): string | undefined {
+  try {
+    const line = readFileSync(new URL('.env', import.meta.url), 'utf8')
+      .split('\n')
+      .find((l) => l.trimStart().startsWith(`${key}=`));
+    return line?.slice(line.indexOf('=') + 1).trim().replace(/^["']|["']$/g, '');
+  } catch {
+    return undefined;
+  }
+}
+
+const PORTAL = (
+  process.env.WXT_PORTAL_URL ??
+  envFromFile('WXT_PORTAL_URL') ??
+  'http://localhost:3000'
+).replace(/\/$/, '');
 
 // Hosts where the content script runs (the four ATS platforms).
 const ATS_MATCHES = [
@@ -14,6 +31,10 @@ const ATS_MATCHES = [
 ];
 
 export default defineConfig({
+  // Next.js dev (`npm run dev:web`) owns port 3000; keep WXT's dev server off it.
+  dev: {
+    server: { port: 3001 },
+  },
   manifest: {
     name: 'Job Filler',
     description: 'Autofill Workday, Greenhouse, Lever and Ashby job applications from your saved profile.',

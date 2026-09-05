@@ -2,12 +2,12 @@ import type { AuthStatus, PlanResult, SerializableMatch } from '@/src/lib/messag
 import { getSettings } from '@/src/lib/storage';
 
 const app = document.getElementById('app')!;
-const send = (msg: unknown) => chrome.runtime.sendMessage(msg);
+const send = (msg: unknown) => browser.runtime.sendMessage(msg);
 
 async function sendToActiveTab(msg: Record<string, unknown>): Promise<any> {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
   if (!tab?.id) throw new Error('No active tab');
-  return chrome.tabs.sendMessage(tab.id, msg);
+  return browser.tabs.sendMessage(tab.id, msg);
 }
 
 function h<K extends keyof HTMLElementTagNameMap>(
@@ -197,7 +197,7 @@ function settingsLink(): HTMLElement {
   a.style.cssText = 'display:block;margin-top:12px;font-size:12px';
   a.addEventListener('click', (e) => {
     e.preventDefault();
-    chrome.runtime.openOptionsPage();
+    browser.runtime.openOptionsPage();
   });
   return a;
 }

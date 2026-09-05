@@ -112,7 +112,7 @@ export const ukHonours = z.enum([
 
 export const educationSchema = z
   .object({
-    id: z.string().uuid().optional(),
+    id: z.string().cuid().optional(),
     institution: shortText.min(1, 'University / school is required'),
     qualificationType: qualificationType,
     fieldOfStudy: shortText.optional(),
@@ -151,7 +151,7 @@ export type EmploymentType = z.infer<typeof employmentType>;
 
 export const experienceSchema = z
   .object({
-    id: z.string().uuid().optional(),
+    id: z.string().cuid().optional(),
     jobTitle: shortText.min(1, 'Job title is required'),
     employer: shortText.min(1, 'Employer is required'),
     location: shortText.optional(),
@@ -185,7 +185,7 @@ export type Experience = z.infer<typeof experienceSchema>;
  * so it is remembered for next time. The portal exposes these on /dashboard/extra.
  */
 export const customAnswerSchema = z.object({
-  id: z.string().uuid().optional(),
+  id: z.string().cuid().optional(),
   /** Stable slug, e.g. `notice-period`. Used for matching on future forms. */
   key: z
     .string()
