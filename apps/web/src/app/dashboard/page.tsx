@@ -2,6 +2,7 @@ import { auth } from '@/auth';
 import { getProfile } from '@/lib/profile-repo';
 import { profileCompleteness } from '@job-filler/shared';
 import { ProfileEditor } from '@/components/ProfileEditor';
+import { OnboardingTour, TourReplayButton } from '@/components/OnboardingTour';
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -10,8 +11,11 @@ export default async function DashboardPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Your application profile</h1>
+      <div className="mb-6" data-tour="progress">
+        <div className="flex items-start justify-between gap-4">
+          <h1 className="text-2xl font-bold">Your application profile</h1>
+          <TourReplayButton />
+        </div>
         <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
           Fill this in once. The browser extension reads it to complete applications.
         </p>
@@ -22,6 +26,7 @@ export default async function DashboardPage() {
       </div>
 
       <ProfileEditor initial={profile} />
+      <OnboardingTour />
     </div>
   );
 }

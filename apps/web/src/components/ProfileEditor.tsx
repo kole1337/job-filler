@@ -97,7 +97,7 @@ export function ProfileEditor({ initial }: { initial: Profile }) {
 
   return (
     <div>
-      <nav className="mb-4 flex gap-1 border-b border-gray-200 dark:border-gray-800">
+      <nav className="mb-4 flex gap-1 border-b border-gray-200 dark:border-gray-800" data-tour="tabs">
         {tabs.map(([id, label]) => (
           <button
             key={id}
@@ -113,6 +113,7 @@ export function ProfileEditor({ initial }: { initial: Profile }) {
         ))}
       </nav>
 
+      <div data-tour="form">
       {tab === 'personal' && (
         <PersonalTab personal={profile.personal} set={setPersonal} />
       )}
@@ -148,8 +149,12 @@ export function ProfileEditor({ initial }: { initial: Profile }) {
           onChange={(customAnswers) => setProfile((p) => ({ ...p, customAnswers }))}
         />
       )}
+      </div>
 
-      <div className="sticky bottom-0 mt-8 flex items-center gap-3 border-t border-gray-200 bg-gray-50 py-4 dark:border-gray-800 dark:bg-gray-950">
+      <div
+        className="sticky bottom-0 mt-8 flex items-center gap-3 border-t border-gray-200 bg-gray-50 py-4 dark:border-gray-800 dark:bg-gray-950"
+        data-tour="save"
+      >
         <button className="btn" onClick={save} disabled={pending}>
           {pending ? 'Saving…' : 'Save profile'}
         </button>
