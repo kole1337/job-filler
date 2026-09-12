@@ -18,7 +18,7 @@
     "@job-filler/shared": "*",
     "@node-rs/argon2": "^2.0.2",
     "@prisma/client": "^5.22.0",
-    "jose": "^5.9.6",
+    "jose": "^6.2.10",
     "next": "^15.1.3",
     "next-auth": "^5.0.0-beta.29",
     "react": "^19.0.0",
