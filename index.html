@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Job Filler — one profile, every application</title>
+  <meta name="description" content="Store your job-application details once and autofill Workday, Greenhouse, Lever and Ashby forms with the browser extension.">
+  <style>
+    :root {
+      --bg: #ffffff;
+      --bg-alt: #f5f7fa;
+      --text: #1b2430;
+      --muted: #5b6675;
+      --accent: #2563eb;
+      --accent-text: #ffffff;
+      --border: #e2e7ee;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #11151c;
+        --bg-alt: #171c25;
+        --text: #e8ecf2;
+        --muted: #9aa5b5;
+        --accent: #5b8def;
+        --accent-text: #0b1020;
+        --border: #262d3a;
+      }
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.6;
+      color: var(--text);
+      background: var(--bg);
+    }
+    a { color: var(--accent); }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 0 20px; }
+
+    /* top bar */
+    .top-bar {
+      background: var(--bg-alt);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 0;
+      font-size: 0.95rem;
+    }
+    .top-bar .wrap { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .brand { font-weight: 700; color: var(--text); text-decoration: none; letter-spacing: 0.02em; }
+    .top-bar nav a { margin-left: 16px; color: var(--muted); text-decoration: none; }
+    .top-bar nav a:hover { color: var(--text); }
+
+    /* sections */
+    section { padding: 56px 0; text-align: center; }
+    section.alt { background: var(--bg-alt); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    h1 { font-size: clamp(2rem, 6vw, 2.8rem); line-height: 1.15; margin: 0 0 16px; }
+    h2 { font-size: 1.6rem; margin: 0 0 12px; }
+    h3 { font-size: 1.1rem; margin: 0 0 6px; }
+    p { margin: 0 0 14px; }
+    .lead { font-size: 1.15rem; color: var(--muted); max-width: 560px; margin: 0 auto 28px; }
+
+    .button {
+      display: inline-block;
+      padding: 12px 26px;
+      border-radius: 8px;
+      background: var(--accent);
+      color: var(--accent-text);
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .button:hover { opacity: 0.9; }
+    .button.secondary { background: transparent; color: var(--accent); border: 1px solid var(--accent); margin-left: 8px; }
+    .note { margin-top: 16px; font-size: 0.9rem; color: var(--muted); }
+
+    /* steps and points */
+    .grid { display: grid; gap: 28px; margin-top: 32px; text-align: left; }
+    @media (min-width: 640px) { .grid { grid-template-columns: repeat(3, 1fr); } }
+    .grid.two { }
+    @media (min-width: 640px) { .grid.two { grid-template-columns: repeat(2, 1fr); } }
+    .num {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--accent); color: var(--accent-text);
+      font-weight: 700; margin-bottom: 10px;
+    }
+    .grid p { color: var(--muted); font-size: 0.97rem; margin: 0; }
+
+    footer { padding: 32px 0 48px; text-align: center; font-size: 0.9rem; color: var(--muted); }
+    footer a { color: var(--muted); }
+  </style>
+</head>
+<body>
+
+  <header class="top-bar">
+    <div class="wrap">
+      <a class="brand" href="/">Job Filler</a>
+      <nav>
+        <a href="#how">How it works</a>
+        <a href="#trust">Trust</a>
+        <a href="/login">Log in</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section>
+      <div class="wrap">
+        <h1>Apply everywhere.<br>Type it once.</h1>
+        <p class="lead">Job Filler keeps one complete profile of you and fills it into Workday, Greenhouse, Lever and Ashby applications with a browser extension. You review. You submit.</p>
+        <a class="button" href="/signup">Create your profile</a>
+        <a class="button secondary" href="#how">See how it works</a>
+        <p class="note">Free · Encrypted · Never submits without you</p>
+      </div>
+    </section>
+
+    <section class="alt" id="how">
+      <div class="wrap">
+        <h2>Three steps, then it's routine</h2>
+        <div class="grid">
+          <div>
+            <div class="num">1</div>
+            <h3>Record</h3>
+            <p>Fill in your profile once: name, education, work history. UK-aware, down to your 2:1.</p>
+          </div>
+          <div>
+            <div class="num">2</div>
+            <h3>Detect</h3>
+            <p>Open an application. The extension recognises the form and maps each field to your profile.</p>
+          </div>
+          <div>
+            <div class="num">3</div>
+            <h3>Review &amp; submit</h3>
+            <p>One click fills the current step, then it stops. You check every answer and press submit yourself.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="trust">
+      <div class="wrap">
+        <h2>Fast, but never reckless</h2>
+        <p class="lead">Autofill only earns its place if you can trust every character it types.</p>
+        <div class="grid two">
+          <div>
+            <h3>Your data, encrypted</h3>
+            <p>Sensitive fields like date of birth, phone and address are encrypted at rest. Nothing reaches an employer except what you watch it fill in.</p>
+          </div>
+          <div>
+            <h3>Never auto-submits</h3>
+            <p>The extension fills the current step and stops. Every application is sent only when you press the button.</p>
+          </div>
+          <div>
+            <h3>UK-aware education</h3>
+            <p>Record your degree the way employers ask for it: a First, a 2:1, a percentage or a mark.</p>
+          </div>
+          <div>
+            <h3>Chrome &amp; Firefox</h3>
+            <p>One sign-in in the extension popup, the same account as this site. Your profile follows you across browsers.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="alt">
+      <div class="wrap">
+        <h2>Two minutes to set up</h2>
+        <p class="lead">Build your profile once and never retype it.</p>
+        <a class="button" href="/signup">Create your account, it's free</a>
+        <a class="button secondary" href="/login">Log in</a>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">Job Filler · One profile, every application · © 2026</div>
+  </footer>
+
+</body>
+</html>
