@@ -191,7 +191,7 @@ function PersonalTab({
         type="date"
         value={personal.dateOfBirth}
         onChange={(v) => set({ dateOfBirth: v })}
-        hint="Encrypted at rest. Only used when a form explicitly asks."
+        hint="Stored locally. Only used when a form explicitly asks."
       />
       <Field label="Email" type="email" value={personal.email} onChange={(v) => set({ email: v })} />
       <Field

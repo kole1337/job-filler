@@ -26,15 +26,15 @@ export default defineContentScript({
 
   main() {
     async function getProfile(): Promise<Profile> {
-      const res = await browser.runtime.sendMessage({ type: 'GET_PROFILE' });
-      if (res?.error || !res?.profile) throw new Error(res?.error ?? 'No profile — log in via the popup');
+      const res: any = await browser.runtime.sendMessage({ type: 'GET_PROFILE' });
+      if (res?.error || !res?.profile) throw new Error(res?.error ?? 'No profile — open the popup to sync it');
       return res.profile as Profile;
     }
 
     // Cache the last plan so APPLY_FILL can reuse the resolved matches.
     let lastPlan: ReturnType<typeof planFill> | null = null;
 
-    browser.runtime.onMessage.addListener((msg, _s, sendResponse) => {
+    browser.runtime.onMessage.addListener((msg: any, _s, sendResponse) => {
       (async (): Promise<PlanResult | { ok: true; filled: number; failed: string[] }> => {
         if (msg?.type === 'PLAN_FILL') {
           const profile = await getProfile();

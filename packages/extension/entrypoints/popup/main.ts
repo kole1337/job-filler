@@ -1,8 +1,8 @@
-import type { AuthStatus, PlanResult, SerializableMatch } from '@/src/lib/messages';
+import type { PlanResult, SerializableMatch } from '@/src/lib/messages';
 import { getSettings } from '@/src/lib/storage';
 
 const app = document.getElementById('app')!;
-const send = (msg: unknown) => browser.runtime.sendMessage(msg);
+const send = (msg: unknown): Promise<any> => browser.runtime.sendMessage(msg);
 
 async function sendToActiveTab(msg: Record<string, unknown>): Promise<any> {
   const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
@@ -32,51 +32,46 @@ let portalUrl = 'http://localhost:3000';
 
 async function init() {
   portalUrl = (await getSettings()).portalUrl;
-  const status: AuthStatus = await send({ type: 'AUTH_STATUS' });
-  status?.loggedIn ? renderLoggedIn(status) : renderLogin();
+  const res = await send({ type: 'GET_PROFILE' });
+  if (res?.error) renderUnreachable(res.error);
+  else renderMain(res?.fetchedAt);
 }
 
-/* ---------------- login ---------------- */
+/* ---------------- portal unreachable ---------------- */
 
-function renderLogin(error?: string) {
-  const email = h('input', { type: 'email', placeholder: 'Email', required: true });
-  const password = h('input', { type: 'password', placeholder: 'Password', required: true });
-  const btn = h('button', { type: 'submit' }, 'Log in');
-
-  const form = h(
-    'form',
-    {},
-    h('h1', {}, 'Job Filler'),
-    h('p', { class: 'muted' }, `Log in with the same account as ${portalUrl}`),
-    email,
-    password,
-    ...(error ? [h('p', { class: 'err' }, error)] : []),
-    h('div', { class: 'row' }, btn, h('a', { href: `${portalUrl}/signup`, target: '_blank' }, 'Create account')),
-    settingsLink(),
-  );
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    btn.disabled = true;
-    btn.textContent = 'Signing in…';
-    const res = await send({ type: 'LOGIN', email: email.value, password: password.value });
-    if (res?.ok) renderLoggedIn({ loggedIn: true, email: res.email });
-    else renderLogin(res?.error ?? 'Login failed');
+function renderUnreachable(error: string) {
+  const retryBtn = h('button', {}, 'Try again');
+  retryBtn.addEventListener('click', () => {
+    retryBtn.disabled = true;
+    retryBtn.textContent = 'Retrying…';
+    init();
   });
 
-  render(form);
+  render(
+    h(
+      'div',
+      {},
+      h('h1', {}, 'Job Filler'),
+      h('p', { class: 'err' }, error),
+      h(
+        'p',
+        { class: 'muted' },
+        `Make sure the portal is running at ${portalUrl} (npm run dev:web), then retry.`,
+      ),
+      h('div', { class: 'row' }, retryBtn),
+      settingsLink(),
+    ),
+  );
 }
 
-/* ---------------- logged in ---------------- */
+/* ---------------- main ---------------- */
 
-function renderLoggedIn(status: AuthStatus) {
+function renderMain(profileFetchedAt?: number) {
   const container = h('div', {});
   const info = h(
     'p',
     { class: 'muted' },
-    status.profileFetchedAt
-      ? `Profile synced ${new Date(status.profileFetchedAt).toLocaleString()}`
-      : 'Profile not synced yet',
+    profileFetchedAt ? `Profile synced ${new Date(profileFetchedAt).toLocaleString()}` : 'Profile not synced yet',
   );
   const msg = h('p', { class: 'ok' });
   const results = h('div', {});
@@ -112,15 +107,8 @@ function renderLoggedIn(status: AuthStatus) {
     }
   });
 
-  const logoutBtn = h('button', { class: 'secondary' }, 'Log out');
-  logoutBtn.addEventListener('click', async () => {
-    await send({ type: 'LOGOUT' });
-    renderLogin();
-  });
-
   container.append(
     h('h1', {}, 'Job Filler'),
-    h('div', { class: 'row', style: 'justify-content:space-between' }, h('span', { class: 'muted' }, status.email ?? ''), logoutBtn),
     info,
     h('div', { class: 'row' }, syncBtn, scanBtn, h('a', { href: `${portalUrl}/dashboard`, target: '_blank' }, 'Edit profile')),
     msg,

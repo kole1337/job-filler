@@ -1,18 +1,22 @@
 # Job Filler
 
-One profile, every application. A **web portal** where you enter your job-application
-details once, and a **cross-browser extension** (Chrome + Firefox) that fills those
-details into **Workday, Greenhouse, Lever and Ashby** application forms — always
-showing you what it will enter before you submit.
+One profile, every application. A **local web portal** where you enter your
+job-application details once, and a **cross-browser extension** (Chrome +
+Firefox) that fills those details into **Workday, Greenhouse, Lever and
+Ashby** application forms — always showing you what it will enter before you
+submit.
+
+Runs entirely on your own machine. No account, no cloud database, no external
+services — your profile lives in one local SQLite file.
 
 ## Monorepo layout
 
 | Path | What |
 | --- | --- |
-| `apps/web` | Next.js 15 portal + API. Auth (email/password), profile CRUD, extension token endpoints. Deploys to Vercel. |
-| `packages/shared` | Zod schemas + types for the profile and auth contracts. Single source of truth. |
+| `apps/web` | Next.js 15 portal + API. Profile CRUD, runs locally with `npm run dev:web`. |
+| `packages/shared` | Zod schemas + types for the profile. Single source of truth. |
 | `packages/ats` | ATS detection, per-site playbooks, the label-based field resolver, and DOM extract/fill helpers. Framework-free, unit-tested. |
-| `packages/extension` | WXT extension. Background (auth + sync), content script (scan + fill), popup, options. Builds Chrome MV3 and Firefox MV2 zips. |
+| `packages/extension` | WXT extension. Background (sync), content script (scan + fill), popup, options. Builds Chrome MV3 and Firefox MV2 zips. |
 | `docs/ats-flows.md` | Analysis of each ATS: steps, field rendering, known selectors. |
 
 ## Project map
@@ -20,12 +24,12 @@ showing you what it will enter before you submit.
 How the pieces talk to each other:
 
 ```
- Browser (you)                      Portal (apps/web, Next.js on Vercel)          Postgres (Neon)
- ─────────────                      ────────────────────────────────────          ───────────────
- /signup /login /dashboard  ──────▶ pages + server actions ──▶ lib/profile-repo ──▶ Prisma models
-                                                                (encrypts PII)
- Extension popup ─▶ background ──▶ /api/auth/token, /api/auth/refresh, /api/profile
-                        │  (tokens + cached profile in browser.storage)
+ Browser (you)                      Portal (apps/web, Next.js on localhost)      SQLite file
+ ─────────────                      ────────────────────────────────────         ───────────
+ /dashboard  ───────────────────▶ pages + server actions ──▶ lib/profile-repo ──▶ Prisma models
+
+ Extension popup ─▶ background ──▶ GET/PUT http://localhost:3000/api/profile
+                        │  (cached profile in browser.storage)
                         ▼
                   content script on the ATS page
                         │ uses packages/ats: detect → extract → resolve → fill
@@ -34,7 +38,8 @@ How the pieces talk to each other:
 ```
 
 `packages/shared` is imported by all three of the others, so the profile shape is
-defined in exactly one place.
+defined in exactly one place. There is no login — the portal and the extension
+both trust whatever is running on your machine.
 
 ### Root
 
@@ -42,19 +47,17 @@ defined in exactly one place.
 | --- | --- |
 | `package.json` | npm workspaces root. All `npm run …` scripts live here and forward to a workspace. |
 | `tsconfig.base.json` | Shared TypeScript settings every package extends. |
-| `.env.example` | Template for `.env` (portal secrets + `WXT_PORTAL_URL` for the extension). |
 | `.prettierrc.json`, `.gitattributes`, `.gitignore` | Formatting / git housekeeping. |
 | `.github/workflows/ci.yml` | CI: install → prisma generate → typecheck → test → build extension → build web. |
 | `.github/dependabot.yml` | Dependency update bot config. |
 | `docs/ats-flows.md` | Research notes per ATS: page steps, how fields render, live-verified selectors. |
-| `docs/deployment.md` | Every environment variable explained + how to deploy to Vercel. |
+| `docs/deployment.md` | The (very short) list of things you can configure. |
 
 ### `packages/shared` — the data contract
 
 | File | What it does |
 | --- | --- |
 | `src/profile.ts` | **The profile schema** (Zod): personal, education, experience, custom answers, enums (qualification types, UK honours, employment types), `emptyProfile`, `profileCompleteness`, suggested custom answers. |
-| `src/auth.ts` | Schemas for credentials, signup password rules, token responses, refresh requests, JWT claims. |
 | `src/index.ts` | Re-exports, plus `ProfileFieldKey` (the list of fillable profile keys). |
 | `src/profile.test.ts` | Unit tests for the schema. |
 
@@ -62,43 +65,23 @@ defined in exactly one place.
 
 | Path | What it does |
 | --- | --- |
-| `prisma/schema.prisma` | Database tables: `User`, `Profile`, `Education`, `Experience`, `CustomAnswer`, `Session` (extension refresh tokens), `VerificationToken`. Columns ending in `Enc` hold encrypted PII. |
+| `prisma/schema.prisma` | Database tables: `Profile` (singleton row), `Education`, `Experience`, `CustomAnswer`. SQLite, one local file. |
 | `prisma/migrations/` | Generated SQL migrations (create new ones with `npm run db:migrate`). |
 | `src/app/page.tsx` | Home page — renders `components/landing/Landing.tsx`. |
 | `src/app/layout.tsx`, `globals.css` | Root HTML shell, page title/metadata, shared Tailwind classes (`.input`, `.btn`, `.card`, …). |
-| `src/app/signup/page.tsx` | Signup form (client side, posts to `/api/auth/signup`). |
-| `src/app/login/page.tsx` | Login form (server action via Auth.js). |
-| `src/app/dashboard/layout.tsx` | Dashboard header/nav; redirects to `/login` if signed out. |
-| `src/app/dashboard/page.tsx` | Profile page: completeness bar + `ProfileEditor` + onboarding tour. |
-| `src/app/dashboard/security/page.tsx` | List/revoke extension sessions, delete account. |
-| `src/app/dashboard/actions.ts` | Server actions used by the dashboard: save profile, list/revoke sessions, delete account. |
-| `src/app/api/auth/signup/route.ts` | Create account + send verification email (rate limited). |
-| `src/app/api/auth/verify-email/route.ts` | Email-verification link target. |
-| `src/app/api/auth/token/route.ts` | **Extension login**: email/password → access + refresh token. |
-| `src/app/api/auth/refresh/route.ts` | Extension token refresh (rotates the refresh token). |
-| `src/app/api/auth/logout/route.ts` | Revoke an extension refresh token. |
-| `src/app/api/auth/[...nextauth]/route.ts` | Auth.js handlers for the website login session. |
-| `src/app/api/profile/route.ts` | `GET` / `PUT` the profile (used by the extension). |
+| `src/app/dashboard/layout.tsx` | Dashboard header/nav. No login, so no redirect/guard here. |
+| `src/app/dashboard/page.tsx` | Profile page: completeness bar + `ProfileEditor` + onboarding tour + "clear local data". |
+| `src/app/dashboard/actions.ts` | Server actions used by the dashboard: save profile, clear all local data. |
+| `src/app/api/profile/route.ts` | `GET` / `PUT` the profile (used by the extension — no auth, just CORS). |
 | `src/app/api/profile/export/route.ts` | Download your profile as JSON. |
 | `src/components/ProfileEditor.tsx` | The big profile form (tabs: personal, education, experience, extra). |
+| `src/components/ClearDataButton.tsx` | Confirms, then wipes the local profile via `clearProfileAction`. |
 | `src/components/OnboardingTour.tsx` | First-visit guided tour on the dashboard (steps target `data-tour="…"` elements). |
 | `src/components/landing/Landing.tsx` | Landing page content (plain HTML-style markup, no client JS). |
 | `src/components/landing/landing.css` | Landing page styles, all scoped under `.landing` (light/dark via `prefers-color-scheme`). |
-| `src/auth.config.ts` | Edge-safe Auth.js config (session length, which routes need login). |
-| `src/auth.ts` | Full Auth.js setup with the email/password Credentials provider. |
-| `src/middleware.ts` | Protects `/dashboard/*`. |
-| `src/lib/profile-repo.ts` | **Read/write the profile to the DB**, encrypting/decrypting sensitive fields. |
-| `src/lib/ext-token.ts` | Issue/verify extension JWTs; issue/rotate/revoke refresh tokens. |
-| `src/lib/api-auth.ts` | `getApiUser()` — accepts either a Bearer token (extension) or a website session. |
-| `src/lib/cors.ts` | CORS allowlist (portal + extension origins). |
-| `src/lib/crypto.ts` | AES-256-GCM encrypt/decrypt, hashing, random tokens. |
-| `src/lib/password.ts` | argon2id hash/verify. |
-| `src/lib/verification.ts` | Email-verify / password-reset tokens. |
-| `src/lib/mail.ts` | Send email via Resend (or print to console in dev) + email templates. |
-| `src/lib/rate-limit.ts` | Rate limiter (Upstash Redis, or in-memory fallback). |
-| `src/lib/env.ts` | Validated environment variables. |
+| `src/lib/profile-repo.ts` | **Read/write the profile to the local DB** — no encryption, no per-user scoping (there's one profile). |
+| `src/lib/cors.ts` | Only `chrome-extension://`/`moz-extension://` origins and the portal's own origin may call the API — no config needed. |
 | `src/lib/db.ts` | Prisma client singleton. |
-| `src/types/next-auth.d.ts` | Adds `user.id` to the Auth.js session type. |
 | `next.config.mjs`, `tailwind.config.ts`, `postcss.config.mjs` | Next.js config (security headers etc.), Tailwind theme (`brand` colour), PostCSS. |
 
 ### `packages/ats` — the filling brain (no browser-extension code)
@@ -127,20 +110,20 @@ defined in exactly one place.
 | File | What it does |
 | --- | --- |
 | `wxt.config.ts` | Manifest (name, permissions, host permissions, Firefox ID), portal URL, dev server. |
-| `entrypoints/background.ts` | Handles `AUTH_STATUS` / `LOGIN` / `LOGOUT` / `SYNC_PROFILE` messages. |
+| `entrypoints/background.ts` | Handles `SYNC_PROFILE` / `GET_PROFILE` messages. |
 | `entrypoints/content.ts` | Runs on ATS pages. Handles `PLAN_FILL`, `APPLY_FILL`, `DETECT` using `packages/ats`. |
-| `entrypoints/popup/main.ts` + `index.html` + `style.css` | The popup UI (vanilla TS): login, sync, plan, review list, fill. |
-| `entrypoints/options/main.ts` + `index.html` | Settings page: portal URL, confidence threshold, "always review", clear data. |
+| `entrypoints/popup/main.ts` + `index.html` + `style.css` | The popup UI (vanilla TS): sync, plan, review list, fill. No login screen — it just talks to whatever portal is configured. |
+| `entrypoints/options/main.ts` + `index.html` | Settings page: portal URL, confidence threshold, "always review", clear cached profile. |
 | `entrypoints/popup/App.tsx`, `main.tsx`, `options/main.tsx` | Empty leftovers from an earlier React version — safe to delete. |
-| `src/lib/api.ts` | Calls the portal: login, token refresh, logout, fetch profile. |
-| `src/lib/storage.ts` | `browser.storage` wrapper: tokens, settings (+ defaults), cached profile. |
+| `src/lib/api.ts` | `fetchProfile()` — plain `GET {portalUrl}/api/profile`, no auth. |
+| `src/lib/storage.ts` | `browser.storage` wrapper: settings (+ defaults), cached profile. |
 | `src/lib/messages.ts` | Message types shared by popup, background and content script. |
 
 ## Where to change things
 
 | I want to… | Go to |
 | --- | --- |
-| **Add a new profile field** | 1. `packages/shared/src/profile.ts` (schema) and `src/index.ts` (`ProfileFieldKey`) → 2. `apps/web/prisma/schema.prisma` + `npm run db:migrate` → 3. `apps/web/src/lib/profile-repo.ts` (load/save; use `encrypt` if it's sensitive) → 4. `apps/web/src/components/ProfileEditor.tsx` (form input) → 5. `packages/ats/src/flatten.ts` (so it's fillable) → 6. `packages/ats/src/keywords.ts` and/or an adapter (so it gets matched). |
+| **Add a new profile field** | 1. `packages/shared/src/profile.ts` (schema) and `src/index.ts` (`ProfileFieldKey`) → 2. `apps/web/prisma/schema.prisma` + `npm run db:migrate` → 3. `apps/web/src/lib/profile-repo.ts` (load/save) → 4. `apps/web/src/components/ProfileEditor.tsx` (form input) → 5. `packages/ats/src/flatten.ts` (so it's fillable) → 6. `packages/ats/src/keywords.ts` and/or an adapter (so it gets matched). |
 | Fix a field that fills wrongly on one ATS | `packages/ats/src/adapters/<ats>.ts`. Check `docs/ats-flows.md` for the known selectors. |
 | Fix a field that's matched wrongly everywhere | `packages/ats/src/keywords.ts` (add a positive/negative phrase), then add a case to `resolver.test.ts`. |
 | Fix a dropdown picking the wrong option | `packages/ats/src/options.ts`. |
@@ -155,13 +138,7 @@ defined in exactly one place.
 | Change the dashboard / profile form | `apps/web/src/app/dashboard/page.tsx`, `apps/web/src/components/ProfileEditor.tsx`. |
 | Change the onboarding tour | `apps/web/src/components/OnboardingTour.tsx` (`STEPS`). |
 | Change colours / shared button & input styles | `apps/web/tailwind.config.ts` (`brand`), `apps/web/src/app/globals.css`. |
-| Change the login / signup pages | `apps/web/src/app/login/page.tsx`, `apps/web/src/app/signup/page.tsx`. |
-| Change password rules | `signupSchema` in `packages/shared/src/auth.ts`. |
-| Change token lifetimes | `apps/web/src/lib/ext-token.ts` (extension), `apps/web/src/auth.config.ts` (website session). |
-| Change rate limits | The `rateLimit(...)` calls in each `apps/web/src/app/api/**/route.ts`. |
-| Change email wording | `apps/web/src/lib/mail.ts`. |
-| Add an API endpoint | New `apps/web/src/app/api/<name>/route.ts`; copy `api/profile/route.ts` for auth + CORS. |
-| Add an environment variable | `.env.example`, `apps/web/src/lib/env.ts`, `docs/deployment.md`. |
+| Add an API endpoint | New `apps/web/src/app/api/<name>/route.ts`; copy `api/profile/route.ts` for CORS. |
 | Change the database | `apps/web/prisma/schema.prisma`, then `npm run db:migrate`. |
 | Change CI | `.github/workflows/ci.yml`. |
 
@@ -169,29 +146,23 @@ defined in exactly one place.
 
 ```bash
 npm install
-cp .env.example .env            # fill in DATABASE_URL etc. (see below)
-npm run db:migrate              # create the schema on your Postgres
+npm run db:migrate              # creates apps/web/data/job-filler.db
 npm run dev:web                 # portal at http://localhost:3000
 npm run dev:ext                 # loads the extension in a dev browser
 ```
 
-Sign up at `/signup` (in dev the verification link is printed to the server
-console), fill your profile at `/dashboard`, then log in with the same
-credentials in the extension popup.
+That's it — no accounts, no `.env` to edit. Fill your profile at
+`/dashboard`, then open the extension popup on a Workday/Greenhouse/Lever/Ashby
+application; it reads the profile straight from the portal running on your
+machine.
 
 ## Environment
 
-Copy `.env.example` to `.env`. Required:
-
-- `DATABASE_URL` / `DIRECT_URL` — Neon Postgres (pooled + direct). See
-  `apps/web/README.md`.
-- `AUTH_SECRET`, `EXT_JWT_SECRET`, `ENCRYPTION_KEY` — `openssl rand -base64 32` each.
-- `NEXT_PUBLIC_APP_URL` — portal URL.
-- `ALLOWED_EXTENSION_ORIGINS` — set once the extension IDs are known so the API
-  only accepts cross-origin calls from your extension.
-
-Optional: `RESEND_API_KEY` (real email; omitted = console), `UPSTASH_REDIS_*`
-(distributed rate limiting; omitted = in-memory).
+Nothing to configure for local use. `apps/web/.env` is committed with
+`DATABASE_URL="file:./data/job-filler.db"` — change it there (or set
+`DATABASE_URL` in your shell) if you want the database stored elsewhere.
+`WXT_PORTAL_URL` (default `http://localhost:3000`) only matters if you run the
+portal on a different port — see `docs/deployment.md`.
 
 ## Scripts
 
@@ -213,11 +184,14 @@ Optional: `RESEND_API_KEY` (real email; omitted = console), `UPSTASH_REDIS_*`
 
 ## Security
 
-See `apps/web/README.md`. Summary: argon2id passwords, AES-256-GCM column
-encryption for sensitive PII (DoB, phone, address, nationality, custom answers),
-short-lived JWT access tokens + rotating opaque refresh tokens for the extension,
-strict CORS allowlist, security headers, per-IP rate limiting, no user
-enumeration.
+This is a local, single-user tool — there's no account system and nothing is
+sent off your machine. The trust model is simply "whatever is running on your
+localhost is you". The one thing still worth guarding against is a random
+webpage in the same browser silently reading your profile from
+`http://localhost:3000`, so the API's CORS policy only allows requests from
+the browser extension's own origin (`chrome-extension://…` /
+`moz-extension://…`, which a normal website cannot spoof) or the portal's own
+origin — see `apps/web/src/lib/cors.ts`. See `apps/web/README.md` for more.
 
 ## Status
 

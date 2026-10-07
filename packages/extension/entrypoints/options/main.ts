@@ -55,10 +55,10 @@ async function render() {
 
   const clearBtn = document.createElement('button');
   clearBtn.className = 'secondary';
-  clearBtn.textContent = 'Clear local data (tokens + cached profile)';
+  clearBtn.textContent = 'Clear cached profile';
   clearBtn.addEventListener('click', async () => {
     await clearAll();
-    status.textContent = 'Local tokens and cached profile cleared.';
+    status.textContent = 'Cached profile cleared.';
   });
 
   async function save(patch: Partial<Settings>) {

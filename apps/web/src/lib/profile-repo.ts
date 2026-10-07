@@ -1,4 +1,3 @@
-import 'server-only';
 import {
   emptyProfile,
   profileDraftSchema,
@@ -7,20 +6,20 @@ import {
   type ProfileInput,
 } from '@job-filler/shared';
 import { prisma } from './db';
-import { decrypt, encrypt } from './crypto';
 
-/** Load the full profile bundle for a user, decrypting sensitive columns. */
-export async function getProfile(userId: string): Promise<Profile> {
-  const [p, education, experience, custom, user] = await Promise.all([
-    prisma.profile.findUnique({ where: { userId } }),
-    prisma.education.findMany({ where: { userId }, orderBy: { sortOrder: 'asc' } }),
-    prisma.experience.findMany({ where: { userId }, orderBy: { sortOrder: 'asc' } }),
-    prisma.customAnswer.findMany({ where: { userId } }),
-    prisma.user.findUnique({ where: { id: userId }, select: { email: true } }),
+/** There is exactly one profile in a local install — always row id 1. */
+const PROFILE_ID = 1;
+
+/** Load the full profile bundle. */
+export async function getProfile(): Promise<Profile> {
+  const [p, education, experience, custom] = await Promise.all([
+    prisma.profile.findUnique({ where: { id: PROFILE_ID } }),
+    prisma.education.findMany({ orderBy: { sortOrder: 'asc' } }),
+    prisma.experience.findMany({ orderBy: { sortOrder: 'asc' } }),
+    prisma.customAnswer.findMany(),
   ]);
 
-  const base = emptyProfile(user?.email ?? '');
-  if (!p) return base;
+  if (!p) return emptyProfile();
 
   return {
     personal: {
@@ -28,17 +27,17 @@ export async function getProfile(userId: string): Promise<Profile> {
       middleName: p.middleName ?? undefined,
       lastName: p.lastName,
       preferredName: p.preferredName ?? undefined,
-      dateOfBirth: decrypt(p.dateOfBirthEnc) ?? undefined,
-      email: p.email || (user?.email ?? ''),
-      phone: decrypt(p.phoneEnc) ?? undefined,
+      dateOfBirth: p.dateOfBirth ?? undefined,
+      email: p.email,
+      phone: p.phone ?? undefined,
       phoneCountry: p.phoneCountry ?? undefined,
-      addressLine1: decrypt(p.addressLine1Enc) ?? undefined,
-      addressLine2: decrypt(p.addressLine2Enc) ?? undefined,
+      addressLine1: p.addressLine1 ?? undefined,
+      addressLine2: p.addressLine2 ?? undefined,
       city: p.city ?? undefined,
       region: p.region ?? undefined,
       postcode: p.postcode ?? undefined,
       country: p.country || 'GB',
-      nationality: decrypt(p.nationalityEnc) ?? undefined,
+      nationality: p.nationality ?? undefined,
       rightToWorkUK: p.rightToWorkUK ?? undefined,
       needsVisaSponsorship: p.needsVisaSponsorship ?? undefined,
       linkedinUrl: p.linkedinUrl ?? undefined,
@@ -72,8 +71,8 @@ export async function getProfile(userId: string): Promise<Profile> {
       id: c.id,
       key: c.key,
       label: c.label,
-      value: decrypt(c.valueEnc) ?? '',
-      matchHints: c.matchHints,
+      value: c.value,
+      matchHints: parseMatchHints(c.matchHints),
       sensitive: c.sensitive,
     })),
     updatedAt: p.updatedAt.toISOString(),
@@ -81,38 +80,57 @@ export async function getProfile(userId: string): Promise<Profile> {
 }
 
 /** Replace the whole profile bundle in one transaction (strict = complete profile). */
-export async function saveProfile(userId: string, input: ProfileInput): Promise<Profile> {
-  return persist(userId, profileInputSchema.parse(input));
+export async function saveProfile(input: ProfileInput): Promise<Profile> {
+  return persist(profileInputSchema.parse(input));
 }
 
 /** Autosave path — accepts partial data from the dashboard as the user types. */
-export async function saveProfileDraft(userId: string, input: unknown): Promise<Profile> {
-  return persist(userId, profileDraftSchema.parse(input) as ProfileInput);
+export async function saveProfileDraft(input: unknown): Promise<Profile> {
+  return persist(profileDraftSchema.parse(input) as ProfileInput);
 }
 
-async function persist(userId: string, data: ProfileInput): Promise<Profile> {
+/** Wipe the profile and all related rows — used by the "clear local data" action. */
+export async function clearProfile(): Promise<void> {
+  await prisma.$transaction([
+    prisma.education.deleteMany(),
+    prisma.experience.deleteMany(),
+    prisma.customAnswer.deleteMany(),
+    prisma.profile.deleteMany({ where: { id: PROFILE_ID } }),
+  ]);
+}
+
+function parseMatchHints(raw: string): string[] {
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+async function persist(data: ProfileInput): Promise<Profile> {
   const pd = data.personal;
 
   await prisma.$transaction([
     prisma.profile.upsert({
-      where: { userId },
+      where: { id: PROFILE_ID },
       create: {
-        userId,
+        id: PROFILE_ID,
         firstName: pd.firstName,
         middleName: pd.middleName,
         lastName: pd.lastName,
         preferredName: pd.preferredName,
-        dateOfBirthEnc: encrypt(pd.dateOfBirth),
+        dateOfBirth: pd.dateOfBirth,
         email: pd.email,
-        phoneEnc: encrypt(pd.phone),
+        phone: pd.phone,
         phoneCountry: pd.phoneCountry,
-        addressLine1Enc: encrypt(pd.addressLine1),
-        addressLine2Enc: encrypt(pd.addressLine2),
+        addressLine1: pd.addressLine1,
+        addressLine2: pd.addressLine2,
         city: pd.city,
         region: pd.region,
         postcode: pd.postcode,
         country: pd.country,
-        nationalityEnc: encrypt(pd.nationality),
+        nationality: pd.nationality,
         rightToWorkUK: pd.rightToWorkUK,
         needsVisaSponsorship: pd.needsVisaSponsorship,
         linkedinUrl: pd.linkedinUrl,
@@ -124,17 +142,17 @@ async function persist(userId: string, data: ProfileInput): Promise<Profile> {
         middleName: pd.middleName ?? null,
         lastName: pd.lastName,
         preferredName: pd.preferredName ?? null,
-        dateOfBirthEnc: encrypt(pd.dateOfBirth),
+        dateOfBirth: pd.dateOfBirth ?? null,
         email: pd.email,
-        phoneEnc: encrypt(pd.phone),
+        phone: pd.phone ?? null,
         phoneCountry: pd.phoneCountry ?? null,
-        addressLine1Enc: encrypt(pd.addressLine1),
-        addressLine2Enc: encrypt(pd.addressLine2),
+        addressLine1: pd.addressLine1 ?? null,
+        addressLine2: pd.addressLine2 ?? null,
         city: pd.city ?? null,
         region: pd.region ?? null,
         postcode: pd.postcode ?? null,
         country: pd.country,
-        nationalityEnc: encrypt(pd.nationality),
+        nationality: pd.nationality ?? null,
         rightToWorkUK: pd.rightToWorkUK ?? null,
         needsVisaSponsorship: pd.needsVisaSponsorship ?? null,
         linkedinUrl: pd.linkedinUrl ?? null,
@@ -142,12 +160,11 @@ async function persist(userId: string, data: ProfileInput): Promise<Profile> {
         githubUrl: pd.githubUrl ?? null,
       },
     }),
-    prisma.education.deleteMany({ where: { userId } }),
-    prisma.experience.deleteMany({ where: { userId } }),
-    prisma.customAnswer.deleteMany({ where: { userId } }),
+    prisma.education.deleteMany(),
+    prisma.experience.deleteMany(),
+    prisma.customAnswer.deleteMany(),
     prisma.education.createMany({
       data: data.education.map((e, i) => ({
-        userId,
         sortOrder: i,
         institution: e.institution,
         qualificationType: e.qualificationType,
@@ -162,7 +179,6 @@ async function persist(userId: string, data: ProfileInput): Promise<Profile> {
     }),
     prisma.experience.createMany({
       data: data.experience.map((e, i) => ({
-        userId,
         sortOrder: i,
         jobTitle: e.jobTitle,
         employer: e.employer,
@@ -176,15 +192,14 @@ async function persist(userId: string, data: ProfileInput): Promise<Profile> {
     }),
     prisma.customAnswer.createMany({
       data: data.customAnswers.map((c) => ({
-        userId,
         key: c.key,
         label: c.label,
-        valueEnc: encrypt(c.value) ?? '',
-        matchHints: c.matchHints,
+        value: c.value,
+        matchHints: JSON.stringify(c.matchHints),
         sensitive: c.sensitive,
       })),
     }),
   ]);
 
-  return getProfile(userId);
+  return getProfile();
 }

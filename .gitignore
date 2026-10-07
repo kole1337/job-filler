@@ -9,15 +9,15 @@ coverage/
 *.zip
 *.tsbuildinfo
 
-# env
+# env — apps/web/.env has no secrets (just the local SQLite path) and is
+# committed on purpose; everything else (machine-specific overrides) stays out.
 .env
 .env.local
 .env*.local
-!.env.example
+!apps/web/.env
 
-# prisma
-prisma/*.db
-prisma/migrations/**/migration_lock.toml.bak
+# local SQLite database
+apps/web/data/
 
 # misc
 .DS_Store

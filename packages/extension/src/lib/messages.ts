@@ -2,17 +2,15 @@ import type { FieldMatch, UnmatchedField } from '@job-filler/ats';
 
 /** Popup/content <-> background message protocol. */
 export type Message =
-  | { type: 'AUTH_STATUS' }
-  | { type: 'LOGIN'; email: string; password: string }
-  | { type: 'LOGOUT' }
   | { type: 'SYNC_PROFILE' }
+  | { type: 'GET_PROFILE' }
   | { type: 'PLAN_FILL'; tabId: number }
   | { type: 'APPLY_FILL'; tabId: number; refs: string[] };
 
-export interface AuthStatus {
-  loggedIn: boolean;
-  email?: string;
+export interface ProfileStatus {
+  ok: boolean;
   profileFetchedAt?: number;
+  error?: string;
 }
 
 export interface PlanResult {

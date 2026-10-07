@@ -1,34 +1,21 @@
-import { credentialsSchema } from '@job-filler/shared';
-import { fetchProfile, login, logout } from '@/src/lib/api';
-import { getAuth, getCachedProfile } from '@/src/lib/storage';
+import type { Message } from '@/src/lib/messages';
+import { fetchProfile } from '@/src/lib/api';
+import { getCachedProfile } from '@/src/lib/storage';
 
 export default defineBackground(() => {
-  browser.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  browser.runtime.onMessage.addListener((raw: any, _sender, sendResponse) => {
+    const msg = raw as Message;
     (async () => {
       switch (msg?.type) {
-        case 'AUTH_STATUS': {
-          const auth = await getAuth();
-          const cache = await getCachedProfile();
-          return { loggedIn: !!auth, email: auth?.email, profileFetchedAt: cache?.fetchedAt };
-        }
-        case 'LOGIN': {
-          const creds = credentialsSchema.parse({ email: msg.email, password: msg.password });
-          const state = await login(creds);
-          await fetchProfile().catch(() => {});
-          return { ok: true, email: state.email };
-        }
-        case 'LOGOUT':
-          await logout();
-          return { ok: true };
         case 'SYNC_PROFILE': {
           const profile = await fetchProfile();
           return { ok: true, fetchedAt: Date.now(), education: profile.education.length, experience: profile.experience.length };
         }
         case 'GET_PROFILE': {
           const cache = await getCachedProfile();
-          if (cache) return { profile: cache.profile };
+          if (cache) return { profile: cache.profile, fetchedAt: cache.fetchedAt };
           const profile = await fetchProfile();
-          return { profile };
+          return { profile, fetchedAt: Date.now() };
         }
         default:
           return { error: `unknown message ${msg?.type}` };
@@ -39,7 +26,7 @@ export default defineBackground(() => {
     return true; // async response
   });
 
-  // Periodically refresh the cached profile while logged in.
+  // Periodically refresh the cached profile from the local portal.
   browser.alarms.create('sync', { periodInMinutes: 180 });
   browser.alarms.onAlarm.addListener((a) => {
     if (a.name === 'sync') fetchProfile().catch(() => {});

@@ -27,28 +27,17 @@ npm run zip            # distributable zips for the stores
 - **Firefox**: `about:debugging` → This Firefox → Load Temporary Add-on →
   `.output/firefox-mv2/manifest.json`. (Or `npx web-ext run` from that folder.)
 
-## Getting the extension IDs (for CORS)
-
-- Chrome: shown on `chrome://extensions` after loading. For a stable ID across
-  machines, add a `key` to the manifest (`wxt.config.ts` → `manifest.key`) or
-  publish and use the assigned ID.
-- Firefox: the `browser_specific_settings.gecko.id` in `wxt.config.ts`
-  (`job-filler@example.com`) — its origin is `moz-extension://<per-install UUID>`,
-  which differs per install, so for Firefox allow the id via the AMO-assigned
-  origin after publishing, or distribute a signed build.
-
-Put both origins in the portal's `ALLOWED_EXTENSION_ORIGINS`.
-
 ## Architecture
 
-- `entrypoints/background.ts` — message broker: `LOGIN` / `LOGOUT` /
-  `SYNC_PROFILE` / `AUTH_STATUS` / `GET_PROFILE`. Stores tokens (obfuscated) and
-  the cached profile in `chrome.storage.local`; refreshes on an alarm.
+- `entrypoints/background.ts` — message broker: `SYNC_PROFILE` / `GET_PROFILE`.
+  Fetches the profile from the local portal with a plain `GET` (no auth — the
+  portal has no login) and caches it in `chrome.storage.local`; refreshes on
+  an alarm.
 - `entrypoints/content.ts` — runs on the four ATS hosts. Handles `PLAN_FILL`
   (detect + extract + resolve, outline review fields) and `APPLY_FILL` (fill the
   selected refs, never submit).
-- `entrypoints/popup` — login, sync status, "Scan this page", the review list.
-- `entrypoints/options` — portal URL, confidence threshold, clear local data.
+- `entrypoints/popup` — sync status, "Scan this page", the review list.
+- `entrypoints/options` — portal URL, confidence threshold, clear cached profile.
 - All ATS logic lives in `@job-filler/ats`; this package is just wiring + UI.
 
 ## Notes

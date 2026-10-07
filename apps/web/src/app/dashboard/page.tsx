@@ -1,12 +1,15 @@
-import { auth } from '@/auth';
 import { getProfile } from '@/lib/profile-repo';
 import { profileCompleteness } from '@job-filler/shared';
 import { ProfileEditor } from '@/components/ProfileEditor';
+import { ClearDataButton } from '@/components/ClearDataButton';
 import { OnboardingTour, TourReplayButton } from '@/components/OnboardingTour';
 
+// Reads the local database on every request — never prerender this at build
+// time (the SQLite file may not exist / be migrated yet when `next build` runs).
+export const dynamic = 'force-dynamic';
+
 export default async function DashboardPage() {
-  const session = await auth();
-  const profile = await getProfile(session!.user.id);
+  const profile = await getProfile();
   const pct = Math.round(profileCompleteness(profile) * 100);
 
   return (
@@ -27,6 +30,15 @@ export default async function DashboardPage() {
 
       <ProfileEditor initial={profile} />
       <OnboardingTour />
+
+      <section className="card mt-8 border-red-200 dark:border-red-900">
+        <h2 className="mb-2 font-semibold text-red-700 dark:text-red-400">Danger zone</h2>
+        <p className="mb-3 text-sm text-gray-600 dark:text-gray-400">
+          Permanently erases your profile, education, experience and custom answers from the
+          local database. This cannot be undone.
+        </p>
+        <ClearDataButton />
+      </section>
     </div>
   );
 }

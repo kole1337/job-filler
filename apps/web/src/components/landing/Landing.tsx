@@ -12,7 +12,7 @@ export function Landing() {
           <nav>
             <a href="#how">How it works</a>
             <a href="#trust">Trust</a>
-            <Link href="/login">Log in</Link>
+            <Link href="/dashboard">Your profile</Link>
           </nav>
         </div>
       </header>
@@ -29,13 +29,13 @@ export function Landing() {
               Job Filler keeps one complete profile of you and fills it into Workday, Greenhouse, Lever
               and Ashby applications with a browser extension. You review. You submit.
             </p>
-            <Link className="button" href="/signup">
-              Create your profile
+            <Link className="button" href="/dashboard">
+              Set up your profile
             </Link>
             <a className="button secondary" href="#how">
               See how it works
             </a>
-            <p className="note">Free · Encrypted · Never submits without you</p>
+            <p className="note">Free · Runs on your own machine · Never submits without you</p>
           </div>
         </section>
 
@@ -74,10 +74,10 @@ export function Landing() {
             <p className="lead">Autofill only earns its place if you can trust every character it types.</p>
             <div className="grid two">
               <div>
-                <h3>Your data, encrypted</h3>
+                <h3>Your data stays on your machine</h3>
                 <p>
-                  Sensitive fields like date of birth, phone and address are encrypted at rest. Nothing
-                  reaches an employer except what you watch it fill in.
+                  Job Filler runs locally — the portal and your profile live on your own computer, in a
+                  single local database file. Nothing is sent to a server you don&apos;t control.
                 </p>
               </div>
               <div>
@@ -94,8 +94,8 @@ export function Landing() {
               <div>
                 <h3>Chrome &amp; Firefox</h3>
                 <p>
-                  One sign-in in the extension popup, the same account as this site. Your profile
-                  follows you across browsers.
+                  The extension talks to the portal running on your machine — no sign-in, no account to
+                  manage.
                 </p>
               </div>
             </div>
@@ -106,18 +106,15 @@ export function Landing() {
           <div className="wrap">
             <h2>Two minutes to set up</h2>
             <p className="lead">Build your profile once and never retype it.</p>
-            <Link className="button" href="/signup">
-              Create your account, it&apos;s free
-            </Link>
-            <Link className="button secondary" href="/login">
-              Log in
+            <Link className="button" href="/dashboard">
+              Set up your profile
             </Link>
           </div>
         </section>
       </main>
 
       <footer>
-        <div className="wrap">Job Filler · One profile, every application · © 2026</div>
+        <div className="wrap">Job Filler · One profile, every application · Open source</div>
       </footer>
     </div>
   );

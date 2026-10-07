@@ -1,5 +1,4 @@
 export * from './profile';
-export * from './auth';
 
 /** Profile keys the ATS layer can target. Keep in sync with `profileSchema`. */
 export type ProfileFieldKey =

@@ -39,10 +39,21 @@ export const personalSchema = z.object({
   middleName: shortText.optional(),
   lastName: shortText.min(1, 'Last name is required'),
   preferredName: shortText.optional(),
-  /** Sensitive — encrypted at rest. */
   dateOfBirth: isoDate.optional(),
-  email: z.string().trim().email().max(320),
-  /** E.164 preferred, e.g. +447700900123. Sensitive — encrypted at rest. */
+  /**
+   * Required string (not `optional()`) so `personal.email` stays a plain
+   * `string` everywhere it's used — but a brand-new local profile that's
+   * never been saved starts with `email: ''`, so empty is allowed here and
+   * only checked for a valid *format* when it's non-empty.
+   */
+  email: z
+    .string()
+    .trim()
+    .max(320)
+    .refine((v) => v === '' || z.string().email().safeParse(v).success, {
+      message: 'Enter a valid email address',
+    }),
+  /** E.164 preferred, e.g. +447700900123. */
   phone: z
     .string()
     .trim()

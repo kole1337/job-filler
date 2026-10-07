@@ -26,7 +26,7 @@ const securityHeaders = [
 
 const nextConfig = {
   reactStrictMode: true,
-  serverExternalPackages: ['@node-rs/argon2', '@prisma/client'],
+  serverExternalPackages: ['@prisma/client'],
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },

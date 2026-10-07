@@ -3,19 +3,9 @@ import type { Profile } from '@job-filler/shared';
 /**
  * browser.storage.local wrapper (WXT's promise-based polyfill — works on Chrome
  * and Firefox alike; the raw `chrome.*` API is callback-style on Firefox).
- * Tokens are lightly obfuscated with a per-install
- * key so a casual glance at storage doesn't reveal them; this is not a substitute
- * for the OS keychain, but browser extensions have no better option and the tokens
- * are short-lived + revocable.
+ * There's no login, so there's nothing secret in here — just settings and a
+ * cached copy of the profile fetched from the local portal.
  */
-export interface AuthState {
-  accessToken: string;
-  accessTokenExp: number; // epoch ms
-  refreshToken: string;
-  email: string;
-  userId: string;
-}
-
 export interface Settings {
   portalUrl: string;
   minConfidence: number;
@@ -32,39 +22,6 @@ const DEFAULT_SETTINGS: Settings = {
   minConfidence: 0.7,
   alwaysReview: true,
 };
-
-function xor(text: string, key: string): string {
-  return Array.from(text)
-    .map((c, i) => String.fromCharCode(c.charCodeAt(0) ^ key.charCodeAt(i % key.length)))
-    .join('');
-}
-
-async function installKey(): Promise<string> {
-  const { __k } = await browser.storage.local.get('__k');
-  if (typeof __k === 'string') return __k;
-  const k = crypto.randomUUID() + crypto.randomUUID();
-  await browser.storage.local.set({ __k: k });
-  return k;
-}
-
-export async function getAuth(): Promise<AuthState | null> {
-  const { auth } = await browser.storage.local.get('auth');
-  if (!auth) return null;
-  try {
-    return JSON.parse(xor(atob(auth as string), await installKey())) as AuthState;
-  } catch {
-    return null;
-  }
-}
-
-export async function setAuth(state: AuthState | null): Promise<void> {
-  if (!state) {
-    await browser.storage.local.remove('auth');
-    return;
-  }
-  const packed = btoa(xor(JSON.stringify(state), await installKey()));
-  await browser.storage.local.set({ auth: packed });
-}
 
 export async function getSettings(): Promise<Settings> {
   const { settings } = await browser.storage.local.get('settings');
@@ -87,5 +44,5 @@ export async function setCachedProfile(profile: Profile): Promise<void> {
 }
 
 export async function clearAll(): Promise<void> {
-  await browser.storage.local.remove(['auth', 'profileCache']);
+  await browser.storage.local.remove('profileCache');
 }
