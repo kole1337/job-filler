@@ -8,7 +8,7 @@ configure for normal use. This page covers the handful of optional overrides.
 Committed to the repo (it holds no secrets, just a local file path):
 
 ```
-DATABASE_URL="file:./data/job-filler.db"
+DATABASE_URL="file:../data/job-filler.db"
 ```
 
 Change this if you want the SQLite database stored somewhere else (an

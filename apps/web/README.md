@@ -14,7 +14,7 @@ npm run db:studio      # browse it in Prisma Studio
 ```
 
 `DATABASE_URL` lives in the committed `apps/web/.env`
-(`file:./data/job-filler.db`) — it's not a secret, just a path, so it's
+(`file:../data/job-filler.db`) — it's not a secret, just a path, so it's
 checked into git. Change it there if you want the file stored somewhere else
 (e.g. a synced folder).
 

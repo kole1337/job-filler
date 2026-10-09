@@ -3,6 +3,7 @@ import { profileCompleteness } from '@job-filler/shared';
 import { ProfileEditor } from '@/components/ProfileEditor';
 import { ClearDataButton } from '@/components/ClearDataButton';
 import { OnboardingTour, TourReplayButton } from '@/components/OnboardingTour';
+import { ExtensionBanner } from '@/components/ExtensionStatus';
 
 // Reads the local database on every request — never prerender this at build
 // time (the SQLite file may not exist / be migrated yet when `next build` runs).
@@ -28,6 +29,7 @@ export default async function DashboardPage() {
         <p className="mt-1 text-xs text-gray-500">{pct}% of the core fields complete</p>
       </div>
 
+      <ExtensionBanner />
       <ProfileEditor initial={profile} />
       <OnboardingTour />
 

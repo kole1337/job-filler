@@ -76,6 +76,8 @@ both trust whatever is running on your machine.
 | `src/app/api/profile/export/route.ts` | Download your profile as JSON. |
 | `src/components/ProfileEditor.tsx` | The big profile form (tabs: personal, education, experience, extra). |
 | `src/components/ClearDataButton.tsx` | Confirms, then wipes the local profile via `clearProfileAction`. |
+| `src/app/dashboard/extension/page.tsx` + `components/InstallGuide.tsx` | "Install extension" page: per-browser steps with copyable paths to the local build, and a live installed/not-installed status. |
+| `src/components/ExtensionStatus.tsx` | `useExtensionStatus()` (talks to the extension's `portal.content.ts`), the header status link and the dashboard "not installed" banner. |
 | `src/components/OnboardingTour.tsx` | First-visit guided tour on the dashboard (steps target `data-tour="…"` elements). |
 | `src/components/landing/Landing.tsx` | Landing page content (plain HTML-style markup, no client JS). |
 | `src/components/landing/landing.css` | Landing page styles, all scoped under `.landing` (light/dark via `prefers-color-scheme`). |
@@ -111,10 +113,10 @@ both trust whatever is running on your machine.
 | --- | --- |
 | `wxt.config.ts` | Manifest (name, permissions, host permissions, Firefox ID), portal URL, dev server. |
 | `entrypoints/background.ts` | Handles `SYNC_PROFILE` / `GET_PROFILE` messages. |
+| `entrypoints/portal.content.ts` | Runs on `localhost` / `127.0.0.1` only; answers the portal's ping so it can show "Extension connected". Sends no profile data. |
 | `entrypoints/content.ts` | Runs on ATS pages. Handles `PLAN_FILL`, `APPLY_FILL`, `DETECT` using `packages/ats`. |
 | `entrypoints/popup/main.ts` + `index.html` + `style.css` | The popup UI (vanilla TS): sync, plan, review list, fill. No login screen — it just talks to whatever portal is configured. |
 | `entrypoints/options/main.ts` + `index.html` | Settings page: portal URL, confidence threshold, "always review", clear cached profile. |
-| `entrypoints/popup/App.tsx`, `main.tsx`, `options/main.tsx` | Empty leftovers from an earlier React version — safe to delete. |
 | `src/lib/api.ts` | `fetchProfile()` — plain `GET {portalUrl}/api/profile`, no auth. |
 | `src/lib/storage.ts` | `browser.storage` wrapper: settings (+ defaults), cached profile. |
 | `src/lib/messages.ts` | Message types shared by popup, background and content script. |
@@ -136,6 +138,7 @@ both trust whatever is running on your machine.
 | Change extension name / permissions | `packages/extension/wxt.config.ts` (`manifest`). |
 | Change the landing page | Text/layout: `apps/web/src/components/landing/Landing.tsx`. Colours/spacing: `landing.css` next to it (colour variables at the top). |
 | Change the dashboard / profile form | `apps/web/src/app/dashboard/page.tsx`, `apps/web/src/components/ProfileEditor.tsx`. |
+| Change the extension install page | `apps/web/src/components/InstallGuide.tsx` (steps), `apps/web/src/app/dashboard/extension/page.tsx` (build-output paths). |
 | Change the onboarding tour | `apps/web/src/components/OnboardingTour.tsx` (`STEPS`). |
 | Change colours / shared button & input styles | `apps/web/tailwind.config.ts` (`brand`), `apps/web/src/app/globals.css`. |
 | Add an API endpoint | New `apps/web/src/app/api/<name>/route.ts`; copy `api/profile/route.ts` for CORS. |
@@ -143,6 +146,8 @@ both trust whatever is running on your machine.
 | Change CI | `.github/workflows/ci.yml`. |
 
 ## Quick start
+
+**Prerequisites:** Node.js ≥ 20.11 (npm comes with it), and Chrome or Firefox.
 
 ```bash
 npm install
@@ -156,18 +161,50 @@ That's it — no accounts, no `.env` to edit. Fill your profile at
 application; it reads the profile straight from the portal running on your
 machine.
 
+### Loading the extension yourself
+
+`npm run dev:ext` opens a throwaway Chrome profile with the extension
+pre-loaded and auto-reloading (`npm run dev:firefox --workspace
+@job-filler/extension` for Firefox). To use it in your normal browser, build it
+and load it unpacked:
+
+```bash
+npm run build:ext   # → packages/extension/.output/chrome-mv3 and firefox-mv2
+```
+
+- **Chrome**: `chrome://extensions` → Developer mode → Load unpacked →
+  `packages/extension/.output/chrome-mv3`.
+- **Firefox**: `about:debugging` → This Firefox → Load Temporary Add-on →
+  `packages/extension/.output/firefox-mv2/manifest.json`.
+
+After changing extension code, rebuild and hit the reload icon on the
+extension card. The portal's **Install extension** page (`/dashboard/extension`)
+shows these steps for the visitor's browser, with copy buttons for the exact
+folder paths, and tells you once the extension is connected. See `packages/extension/README.md` for more.
+
 ## Environment
 
 Nothing to configure for local use. `apps/web/.env` is committed with
-`DATABASE_URL="file:./data/job-filler.db"` — change it there (or set
+`DATABASE_URL="file:../data/job-filler.db"` — change it there (or set
 `DATABASE_URL` in your shell) if you want the database stored elsewhere.
 `WXT_PORTAL_URL` (default `http://localhost:3000`) only matters if you run the
 portal on a different port — see `docs/deployment.md`.
 
 ## Scripts
 
-`npm run` … `dev:web`, `dev:ext`, `build:web`, `build:ext`, `db:migrate`,
-`db:studio`, `lint`, `typecheck`, `test`.
+| Script | What it does |
+| --- | --- |
+| `dev:web` | Portal at http://localhost:3000 with hot reload. |
+| `dev:ext` | Extension in a dev Chrome profile with auto-reload. |
+| `build:web` / `build:ext` | Production builds of the portal / extension. |
+| `db:migrate` | Apply (or create, after editing `schema.prisma`) database migrations. |
+| `db:studio` | Browse the local database in Prisma Studio. |
+| `test` | Vitest unit tests (`packages/*/src/*.test.ts`). |
+| `typecheck` | `tsc --noEmit` across every workspace. |
+| `lint` | Next.js ESLint for the portal. |
+
+CI (`.github/workflows/ci.yml`) runs `typecheck`, `test`, `build:ext` and
+`build:web` on every pull request — run the same locally before opening one.
 
 ## How the fill works (hybrid)
 
@@ -195,8 +232,31 @@ origin — see `apps/web/src/lib/cors.ts`. See `apps/web/README.md` for more.
 
 ## Status
 
-End-to-end skeleton. ATS playbook selectors are from documented structures and
-marked `// VERIFY LIVE` — run the live verification pass (open one public posting
-per ATS, confirm/patch selectors) before relying on it. `npm audit` currently
+Working end to end, but early. Some ATS playbook selectors (Lever, Ashby) are
+from documented structures and still marked `// VERIFY LIVE` — confirming them
+against a real public posting is a great first contribution. `npm audit` currently
 flags issues in build-time tooling (WXT's `adm-zip`/`tar`/`esbuild`, Next's
 bundled `postcss`); none are in the portal's runtime path.
+
+## Contributing
+
+Contributions are welcome — bug reports, selector fixes, new ATS adapters.
+
+- **A field filled wrongly or not at all?** Open an issue with the URL of a
+  public job posting, which field went wrong, and what the popup showed for it
+  (auto-filled / "Check first" / unmatched). The "Where to change things" table
+  above points at the file that usually needs fixing.
+- **Pull requests:** fork, branch off `main`, keep changes focused, and add a
+  test in `packages/ats/src/resolver.test.ts` when you change matching
+  behaviour. Run `npm run typecheck && npm test` before pushing.
+- **Formatting:** Prettier (`.prettierrc.json`) — `npx prettier --write .`
+
+## Disclaimer
+
+Not affiliated with or endorsed by Workday, Greenhouse, Lever or Ashby. You are
+responsible for the accuracy of what you submit and for following each site's
+terms of use.
+
+## License
+
+[MIT](LICENSE) © 2026 Nikola Parushev

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ExtensionNavLink } from '@/components/ExtensionStatus';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -7,9 +8,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <Link href="/dashboard" className="text-lg font-bold">
           Job Filler
         </Link>
-        <Link href="/" className="text-sm text-gray-500 underline">
-          About
-        </Link>
+        <nav className="flex items-center gap-4">
+          <ExtensionNavLink />
+          <Link href="/" className="text-sm text-gray-500 underline">
+            About
+          </Link>
+        </nav>
       </header>
       {children}
     </div>

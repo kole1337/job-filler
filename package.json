@@ -2,6 +2,7 @@
   "name": "job-filler",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "description": "Cross-browser extension + web portal to autofill UK job applications on Workday, Greenhouse, Lever and Ashby.",
   "workspaces": [
     "apps/*",

@@ -255,6 +255,15 @@ export const profileDraftSchema = z.object({
 });
 export type ProfileDraft = z.infer<typeof profileDraftSchema>;
 
+/**
+ * What `GET /api/profile` returns: whatever the dashboard has saved so far, which
+ * may be an unfinished draft (e.g. no last name yet). The extension fills what's
+ * there and skips blanks, so only the shape is checked here, not completeness.
+ */
+export const savedProfileSchema = profileSchema.extend({
+  personal: personalSchema.extend({ firstName: shortText, lastName: shortText }),
+});
+
 /** 0..1 fraction of the "core" profile that is filled in. */
 export function profileCompleteness(p: Profile): number {
   const core = [

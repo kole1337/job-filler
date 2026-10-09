@@ -24,3 +24,4 @@ apps/web/data/
 *.log
 .vercel
 .turbo
+*.db

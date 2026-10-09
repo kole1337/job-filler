@@ -30,7 +30,7 @@ const STEPS: Step[] = [
   {
     target: 'form',
     title: 'Type each answer once',
-    body: 'Enter your details exactly as employers ask for them — UK degree grades like a 2:1 or a First included. Sensitive fields such as your date of birth and phone number are encrypted at rest.',
+    body: 'Enter your details exactly as employers ask for them — UK degree grades like a 2:1 or a First included. Everything is stored in a single database file on this computer — nothing is uploaded.',
   },
   {
     target: 'save',
@@ -39,7 +39,7 @@ const STEPS: Step[] = [
   },
   {
     title: 'Last step: the extension 🚀',
-    body: 'Install the Job Filler extension in Chrome or Firefox and sign in with this same account. Then open any job application and press Fill — it completes the current step and stops, so you always review before you submit. That’s the whole tour!',
+    body: 'Install the Job Filler extension — the “Install extension” link at the top walks you through it in about a minute. Then open any job application and press Fill — it completes the current step and stops, so you always review before you submit. That’s the whole tour!',
   },
 ];
 

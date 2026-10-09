@@ -4,6 +4,7 @@ import {
   experienceSchema,
   profileInputSchema,
   profileDraftSchema,
+  savedProfileSchema,
   emptyProfile,
 } from './index';
 
@@ -67,4 +68,12 @@ describe('profileInputSchema', () => {
     expect(() => profileDraftSchema.parse(emptyProfile('a@b.com'))).not.toThrow();
   });
 
+});
+
+describe('savedProfileSchema', () => {
+  it('accepts an unfinished profile, as the extension receives it', () => {
+    const draft = emptyProfile();
+    draft.personal.firstName = 'Ada';
+    expect(() => savedProfileSchema.parse(draft)).not.toThrow();
+  });
 });
