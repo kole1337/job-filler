@@ -254,6 +254,11 @@ Working end to end, but early. Some ATS playbook selectors (Lever, Ashby) are
 from documented structures and still marked `// VERIFY LIVE` — confirming them
 against a real public posting is a great first contribution.
 
+## Future features
+
+- Mutliple profiles. Applying for different roles? Switch between them on the go.
+- Create your profile based on your CV.
+
 ## Contributing
 
 Contributions are welcome — bug reports, selector fixes, new ATS adapters.
