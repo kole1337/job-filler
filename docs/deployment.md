@@ -21,7 +21,8 @@ location and update the path.
 ## `WXT_PORTAL_URL` — which portal the extension talks to
 
 Default: `http://localhost:3000`. Only needed if you run the portal on a
-different port or host. Either:
+different port. The portal only listens on, and only answers requests to,
+`localhost` / `127.0.0.1`, so pointing it at another machine won't work. Either:
 
 - set it inline: `WXT_PORTAL_URL=http://localhost:4000 npm run build:ext`, or
 - put it in `packages/extension/.env`, or
@@ -39,7 +40,8 @@ on macOS, or a process manager like `pm2`). None of this is required to use
 the extension — it only needs the portal running while you're filling in
 applications.
 
-## Everything else
+## Local use
 
-There is no email service, no rate limiter, no encryption key, and no account
-system to configure — see the root `README.md`'s "Security" section for why.
+The portal is intended for a machine and network you trust. It does not
+guarantee that profile data is secure; you are responsible for protecting the
+machine, network, browser extensions, and database location you use.

@@ -74,10 +74,10 @@ export function Landing() {
             <p className="lead">Autofill only earns its place if you can trust every character it types.</p>
             <div className="grid two">
               <div>
-                <h3>Your data stays on your machine</h3>
+                <h3>Local profile storage</h3>
                 <p>
-                  Job Filler runs locally — the portal and your profile live on your own computer, in a
-                  single local database file. Nothing is sent to a server you don&apos;t control.
+                  Job Filler stores the portal profile in a local database file. You are responsible for
+                  securing the computer, browser, network and storage you use with it.
                 </p>
               </div>
               <div>

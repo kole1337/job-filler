@@ -6,8 +6,27 @@ Firefox) that fills those details into **Workday, Greenhouse, Lever and
 Ashby** application forms — always showing you what it will enter before you
 submit.
 
-Runs entirely on your own machine. No account, no cloud database, no external
-services — your profile lives in one local SQLite file.
+Designed for local use: your profile is stored in a SQLite file on the machine
+running the portal.
+
+## Run it and add the extension
+
+Install Node.js 20.11+ and Chrome or Firefox, then run the portal and build the
+extension:
+
+```bash
+npm install
+npm run db:migrate
+npm run dev:web                 # open http://localhost:3000/dashboard
+npm run build:ext
+```
+
+In Chrome, open `chrome://extensions`, enable **Developer mode**, select **Load
+unpacked**, and choose `packages/extension/.output/chrome-mv3`. In Firefox,
+open `about:debugging#/runtime/this-firefox`, select **Load Temporary Add-on…**,
+and choose `packages/extension/.output/firefox-mv2/manifest.json`. The Firefox
+add-on must be reloaded after each browser restart. See [Quick start](#quick-start)
+for development mode and fuller instructions.
 
 ## Monorepo layout
 
@@ -72,7 +91,7 @@ both trust whatever is running on your machine.
 | `src/app/dashboard/layout.tsx` | Dashboard header/nav. No login, so no redirect/guard here. |
 | `src/app/dashboard/page.tsx` | Profile page: completeness bar + `ProfileEditor` + onboarding tour + "clear local data". |
 | `src/app/dashboard/actions.ts` | Server actions used by the dashboard: save profile, clear all local data. |
-| `src/app/api/profile/route.ts` | `GET` / `PUT` the profile (used by the extension — no auth, just CORS). |
+| `src/app/api/profile/route.ts` | `GET` / `PUT` the profile used by the extension. |
 | `src/app/api/profile/export/route.ts` | Download your profile as JSON. |
 | `src/components/ProfileEditor.tsx` | The big profile form (tabs: personal, education, experience, extra). |
 | `src/components/ClearDataButton.tsx` | Confirms, then wipes the local profile via `clearProfileAction`. |
@@ -82,9 +101,9 @@ both trust whatever is running on your machine.
 | `src/components/landing/Landing.tsx` | Landing page content (plain HTML-style markup, no client JS). |
 | `src/components/landing/landing.css` | Landing page styles, all scoped under `.landing` (light/dark via `prefers-color-scheme`). |
 | `src/lib/profile-repo.ts` | **Read/write the profile to the local DB** — no encryption, no per-user scoping (there's one profile). |
-| `src/lib/cors.ts` | Only `chrome-extension://`/`moz-extension://` origins and the portal's own origin may call the API — no config needed. |
+| `src/lib/cors.ts` | Browser cross-origin response headers for the profile API. |
 | `src/lib/db.ts` | Prisma client singleton. |
-| `next.config.mjs`, `tailwind.config.ts`, `postcss.config.mjs` | Next.js config (security headers etc.), Tailwind theme (`brand` colour), PostCSS. |
+| `next.config.mjs`, `tailwind.config.ts`, `postcss.config.mjs` | Next.js, Tailwind and PostCSS configuration. |
 
 ### `packages/ats` — the filling brain (no browser-extension code)
 
@@ -141,7 +160,7 @@ both trust whatever is running on your machine.
 | Change the extension install page | `apps/web/src/components/InstallGuide.tsx` (steps), `apps/web/src/app/dashboard/extension/page.tsx` (build-output paths). |
 | Change the onboarding tour | `apps/web/src/components/OnboardingTour.tsx` (`STEPS`). |
 | Change colours / shared button & input styles | `apps/web/tailwind.config.ts` (`brand`), `apps/web/src/app/globals.css`. |
-| Add an API endpoint | New `apps/web/src/app/api/<name>/route.ts`; copy `api/profile/route.ts` for CORS. |
+| Add an API endpoint | New `apps/web/src/app/api/<name>/route.ts`; follow `api/profile/route.ts` for response handling. |
 | Change the database | `apps/web/prisma/schema.prisma`, then `npm run db:migrate`. |
 | Change CI | `.github/workflows/ci.yml`. |
 
@@ -219,24 +238,21 @@ CI (`.github/workflows/ci.yml`) runs `typecheck`, `test`, `build:ext` and
    Unmapped required fields are listed so you can add them to your profile.
 6. Nothing is submitted. Ever. You review and click submit yourself.
 
-## Security
+## Local-use notice
 
-This is a local, single-user tool — there's no account system and nothing is
-sent off your machine. The trust model is simply "whatever is running on your
-localhost is you". The one thing still worth guarding against is a random
-webpage in the same browser silently reading your profile from
-`http://localhost:3000`, so the API's CORS policy only allows requests from
-the browser extension's own origin (`chrome-extension://…` /
-`moz-extension://…`, which a normal website cannot spoof) or the portal's own
-origin — see `apps/web/src/lib/cors.ts`. See `apps/web/README.md` for more.
+This project is intended to run locally and does not provide a security
+guarantee for the information you enter. You are responsible for the machine,
+browser extensions, network, and storage location you use with it. The most
+serious likely failure is that another process or device able to reach the
+portal could read or replace your saved profile, including contact details,
+address, work history, and custom answers. Do not expose the portal to an
+untrusted network or use it for data you are unwilling to risk disclosing.
 
 ## Status
 
 Working end to end, but early. Some ATS playbook selectors (Lever, Ashby) are
 from documented structures and still marked `// VERIFY LIVE` — confirming them
-against a real public posting is a great first contribution. `npm audit` currently
-flags issues in build-time tooling (WXT's `adm-zip`/`tar`/`esbuild`, Next's
-bundled `postcss`); none are in the portal's runtime path.
+against a real public posting is a great first contribution.
 
 ## Contributing
 

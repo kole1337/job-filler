@@ -1,7 +1,6 @@
 # @job-filler/web
 
-Next.js 15 (App Router) portal + API. Runs locally — no accounts, no cloud
-database.
+Next.js 15 (App Router) portal + API intended for local use.
 
 ## Database — SQLite
 
@@ -21,12 +20,6 @@ checked into git. Change it there if you want the file stored somewhere else
 **Backup / move your data**: copy `apps/web/data/job-filler.db`. That's the
 entire database.
 
-## No accounts
-
-There is no login. The portal trusts whatever is making the request, subject
-only to the CORS check below — it's meant to run on your own machine for your
-own use, not to be exposed to the internet.
-
 ## API
 
 | Route | Method | Purpose |
@@ -34,27 +27,13 @@ own use, not to be exposed to the internet.
 | `/api/profile` | GET / PUT | full profile bundle (used by the extension and the dashboard) |
 | `/api/profile/export` | GET | download your profile as JSON |
 
-### CORS
+## Local-use notice
 
-Only two kinds of origin may call these routes:
-- the portal's own origin (same-origin requests from the dashboard), and
-- `chrome-extension://…` / `moz-extension://…` — the browser extension. A
-  normal website cannot claim this origin, so this is safe to allow
-  unconditionally; no extension-ID configuration needed.
-
-See `src/lib/cors.ts`.
-
-## Security measures
-
-- **No PII encryption at rest**: this is a local single-user SQLite file — if
-  someone has access to that file, encrypting its columns with a key stored
-  next to it wouldn't have protected you anyway. Keep the file as private as
-  you'd keep any other personal document.
-- **No rate limiting**: there's no login to brute-force and no public
-  endpoint worth throttling in a local single-user tool.
-- **Headers** (`next.config.mjs`): CSP, `X-Frame-Options: DENY`,
-  `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`.
-- **Prisma** parameterised queries only; Zod validation on every input.
+The portal is intended to be used only on a machine and network you trust. It
+does not guarantee that profile data is secure. If another process or device
+can reach the portal, it may be able to read or replace profile data. You are
+responsible for protecting the machine, network, browser extensions, and local
+database used with this project.
 
 ## Running it
 

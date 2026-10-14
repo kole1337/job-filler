@@ -208,7 +208,7 @@ export const customAnswerSchema = z.object({
   value: longText,
   /** Optional keyword hints that help the resolver match this to a form field. */
   matchHints: z.array(shortText).max(20).default([]),
-  /** EEO/diversity answers are opt-in per value; default is "prefer not to say". */
+  /** Retained metadata for saved custom answers. */
   sensitive: z.boolean().default(false),
 });
 export type CustomAnswer = z.infer<typeof customAnswerSchema>;

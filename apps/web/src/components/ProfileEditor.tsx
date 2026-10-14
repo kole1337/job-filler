@@ -461,18 +461,6 @@ function ExtraTab({
               onChange(items.map((it, idx) => (idx === i ? { ...it, value: e.target.value } : it)))
             }
           />
-          <label className="mt-2 flex items-center gap-2 text-xs text-gray-500">
-            <input
-              type="checkbox"
-              checked={c.sensitive}
-              onChange={(e) =>
-                onChange(
-                  items.map((it, idx) => (idx === i ? { ...it, sensitive: e.target.checked } : it)),
-                )
-              }
-            />
-            Sensitive (diversity / EEO) — only fill when I opt in per form
-          </label>
         </div>
       ))}
 
